@@ -1,0 +1,12 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - config
+    tmpDir: build/phpstan
+
+    # This is a package, so Larastan cannot boot an application to discover
+    # where config files live. Point it at ours, otherwise every `env()` call in
+    # config/assignment.php is reported as being outside the config directory.
+    configDirectories:
+        - config

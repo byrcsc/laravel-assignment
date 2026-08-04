@@ -1,0 +1,37 @@
+laravel: '@testbench'
+
+providers:
+  - Workbench\App\Providers\WorkbenchServiceProvider
+  - ByRcsc\LaravelAssignment\AssignmentServiceProvider
+
+migrations:
+  - workbench/database/migrations
+
+seeders:
+  - Workbench\Database\Seeders\DatabaseSeeder
+
+workbench:
+  install: true
+  health: false
+  discovers:
+    config: false
+    # The demo models are seeded through factories, so these are discovered.
+    factories: true
+    commands: false
+    components: false
+    views: false
+    web: false
+    api: false
+  build:
+    - create-sqlite-db
+    # The package publishes its migrations rather than loading them, exactly as
+    # a real application installs them. The published files are gitignored.
+    - vendor-publish:
+        --tag: assignment-migrations
+        --force: true
+    - migrate-fresh
+
+# Environment lives in `workbench/.env`, which Testbench copies into the
+# skeleton on every run. Keeping it there rather than in an `env:` block below
+# means one source of truth, and that file explains why its values are what
+# they are.

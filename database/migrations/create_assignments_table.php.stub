@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+
+/*
+ * The schema — `assignments`, `assignment_scopes`, `assignment_queue` — lands
+ * with issue A2. This stub exists now so the `assignment-migrations` publish
+ * tag and the workbench build's publish-then-migrate flow are exercised from
+ * the first green build.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        //
+    }
+
+    public function down(): void
+    {
+        //
+    }
+};
