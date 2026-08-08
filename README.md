@@ -166,8 +166,8 @@ Per-assignee capacity caps work the same way: filter candidates by
   rotate.
 - `FirstAvailable` makes your query order the priority order: senior sellers
   first is `orderBy('tier')` and nothing else.
-- A closure receives the assignable, the candidates, and the scope, and
-  returns one candidate:
+- A closure receives the assignable and the candidates, and returns one
+  candidate:
 
 ```php
 ->using(fn ($lead, $candidates) => $candidates->sortByDesc('conversion_rate')->first())
@@ -345,8 +345,9 @@ Assignment is atomic on MySQL, PostgreSQL, and SQLite:
 - Two concurrent calls cannot both fill the same slot. The open-slot rule is
   a database constraint, and the loser gets an exception, not a duplicate.
 - Round robin cursors cannot skip or repeat a candidate under concurrency;
-  selection within one scope is serialized, and different scopes do not block
-  each other.
+  selection within one scope is serialized, while different scope rows are
+  locked independently. SQLite may still serialize writes at the database
+  level.
 
 ## Out of scope
 
