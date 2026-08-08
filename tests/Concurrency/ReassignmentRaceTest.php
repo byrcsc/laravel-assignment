@@ -36,10 +36,13 @@ it('allows exactly one concurrent reassignment to replace an open row', function
     $current = AssigneeRecord::query()->create();
     $assignable->assign($current);
     $assignableId = $assignable->getKey();
+    $replacementIds = collect(range(1, 2))
+        ->map(fn (): mixed => AssigneeRecord::query()->create()->getKey())
+        ->all();
 
-    $outcomes = ParallelRun::run(2, function () use ($assignableId): string {
+    $outcomes = ParallelRun::run(2, function (int $child) use ($assignableId, $replacementIds): string {
         $assignable = AssignableRecord::query()->findOrFail($assignableId);
-        $replacement = AssigneeRecord::query()->create();
+        $replacement = AssigneeRecord::query()->findOrFail($replacementIds[$child]);
         $assignmentClass = Assignment::class;
         Event::listen("eloquent.updating: {$assignmentClass}", function (Assignment $assignment): void {
             if ($assignment->ended_reason === EndReason::Reassigned) {
