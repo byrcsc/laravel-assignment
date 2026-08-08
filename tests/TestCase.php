@@ -26,9 +26,8 @@ abstract class TestCase extends Orchestra
 
     /**
      * Which engine the suite runs against. SQLite in memory is the default;
-     * CI's database matrix sets `DB_DRIVER` to prove the engine against the
-     * things SQLite will not tell the truth about - `lockForUpdate()`, index
-     * use, and real column types.
+     * CI's database matrix sets `DB_DRIVER` to exercise row locking, native
+     * column types, and production index behavior absent from SQLite.
      *
      * @return array<string, mixed>
      */
