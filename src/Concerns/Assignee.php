@@ -6,9 +6,9 @@ namespace ByRcsc\LaravelAssignment\Concerns;
 
 use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
 use ByRcsc\LaravelAssignment\Models\Assignment;
+use ByRcsc\LaravelAssignment\Support\AssignmentMorphType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Relations\Relation;
 
 /**
  * Adds assignment history and workload readers to an assignee model.
@@ -49,18 +49,9 @@ trait Assignee
         $assignments = $this->openAssignments();
 
         if ($assignableType !== null) {
-            $assignments->where('assignable_type', $this->assignmentMorphType($assignableType));
+            $assignments->where('assignable_type', AssignmentMorphType::for($assignableType));
         }
 
         return $assignments->count();
-    }
-
-    private function assignmentMorphType(string $assignableType): string|int
-    {
-        if (! is_a($assignableType, Model::class, true)) {
-            return $assignableType;
-        }
-
-        return Relation::getMorphAlias($assignableType);
     }
 }

@@ -11,6 +11,16 @@ final class ModelIdentity
 {
     public static function for(Model $model): string
     {
+        return self::from($model->getMorphClass(), self::key($model));
+    }
+
+    public static function from(string $type, int|string $key): string
+    {
+        return json_encode([$type, (string) $key], JSON_THROW_ON_ERROR);
+    }
+
+    public static function key(Model $model): int|string
+    {
         $key = $model->getKey();
 
         if (! is_int($key)) {
@@ -19,10 +29,7 @@ final class ModelIdentity
             }
         }
 
-        return json_encode([
-            $model->getMorphClass(),
-            (string) $key,
-        ], JSON_THROW_ON_ERROR);
+        return $key;
     }
 
     public static function matches(Model $first, Model $second): bool
