@@ -190,8 +190,12 @@ $assignment = Assignment::for($delivery)
     ->offer();
 
 $driver->accept($assignment);   // offered -> active
-$driver->decline($assignment);  // offered -> ended (declined), cascade advances
+$driver->decline($assignment);  // offered -> ended (declined)
 ```
+
+Only profile-driven offers start a cascade because the profile is what lets
+the engine resolve candidates again later. An ad-hoc fluent `offer()` has no
+`cascade_id` and ends without advancing when it is declined or expires.
 
 `expiresIn()` puts an `expires_at` on the offer. The instant it passes, the
 offer stops holding its slot and counts as `expired` in history. No worker is

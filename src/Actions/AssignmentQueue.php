@@ -10,12 +10,15 @@ use ByRcsc\LaravelAssignment\Models\Assignment;
 use ByRcsc\LaravelAssignment\Models\QueuedAssignment;
 use ByRcsc\LaravelAssignment\Support\AssignmentMorphType;
 use ByRcsc\LaravelAssignment\Support\AssignmentSlot;
+use ByRcsc\LaravelAssignment\Support\RowClaimer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 
 final class AssignmentQueue
 {
+    public function __construct(private readonly RowClaimer $claimer) {}
+
     public function enqueue(
         Model $assignable,
         ?string $role = null,
@@ -116,22 +119,9 @@ final class AssignmentQueue
 
     private function claim(mixed $entryId): ?QueuedAssignment
     {
-        $query = QueuedAssignment::query()->whereKey($entryId);
-        $driver = (new QueuedAssignment)->getConnection()->getDriverName();
-
-        if ($driver === 'sqlite') {
-            $claimed = $query->update([
-                'updated_at' => $query->getQuery()->raw('updated_at'),
-            ]);
-
-            if ($claimed === 0) {
-                return null;
-            }
-
-            return QueuedAssignment::query()->whereKey($entryId)->first();
-        }
-
-        return $query->lock('for update skip locked')->first();
+        return $this->claimer->claim(
+            QueuedAssignment::query()->whereKey($entryId),
+        );
     }
 
     /** @return Builder<Assignment> */

@@ -45,6 +45,11 @@ return new class extends Migration
                 ['assignable_type', 'assignable_id', 'created_at'],
                 'assignments_assignable_created_index',
             );
+            $table->index(
+                ['status', 'expires_at'],
+                'assignments_status_expires_index',
+            );
+            $table->index('cascade_id', 'assignments_cascade_index');
         });
 
         Schema::create($this->table('scopes'), function (Blueprint $table): void {

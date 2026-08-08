@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property int|string $assignable_id
  * @property string $assignee_type
  * @property int|string $assignee_id
+ * @property ?string $role
+ * @property ?string $cascade_id
  * @property AssignmentStatus $status
  * @property ?EndReason $ended_reason
  * @property ?CarbonImmutable $offered_at

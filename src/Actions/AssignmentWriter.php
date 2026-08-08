@@ -11,6 +11,7 @@ use ByRcsc\LaravelAssignment\Events\Assigned;
 use ByRcsc\LaravelAssignment\Events\AssignmentAccepted;
 use ByRcsc\LaravelAssignment\Events\AssignmentDeclined;
 use ByRcsc\LaravelAssignment\Events\AssignmentOffered;
+use ByRcsc\LaravelAssignment\Events\OfferExpired;
 use ByRcsc\LaravelAssignment\Events\Reassigned;
 use ByRcsc\LaravelAssignment\Events\Unassigned;
 use ByRcsc\LaravelAssignment\Exceptions\AlreadyAssigned;
@@ -19,17 +20,23 @@ use ByRcsc\LaravelAssignment\Exceptions\NotAssigned;
 use ByRcsc\LaravelAssignment\Exceptions\NotTheAssignee;
 use ByRcsc\LaravelAssignment\Exceptions\OfferNotOpen;
 use ByRcsc\LaravelAssignment\Exceptions\SlotOccupied;
+use ByRcsc\LaravelAssignment\Jobs\AdvanceExpiredOffer;
 use ByRcsc\LaravelAssignment\Models\Assignment;
 use ByRcsc\LaravelAssignment\Models\QueuedAssignment;
 use ByRcsc\LaravelAssignment\Support\AssignmentSlot;
+use ByRcsc\LaravelAssignment\Support\ModelIdentity;
+use ByRcsc\LaravelAssignment\Support\RowClaimer;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 
 final class AssignmentWriter
 {
+    public function __construct(private readonly RowClaimer $claimer) {}
+
     public function assign(
         Model $assignable,
         Model $assignee,
@@ -54,6 +61,7 @@ final class AssignmentWriter
         ?Model $by = null,
         ?int $ttlSeconds = null,
         ?string $scope = null,
+        ?string $cascadeId = null,
     ): Assignment {
         return $this->createAssignment(new AssignmentData(
             assignable: $assignable,
@@ -63,6 +71,7 @@ final class AssignmentWriter
             by: $by,
             scope: $scope,
             ttlSeconds: $ttlSeconds,
+            cascadeId: $cascadeId,
         ));
     }
 
@@ -85,11 +94,12 @@ final class AssignmentWriter
 
             return $assignment;
         });
+
     }
 
     public function decline(Model $assignee, Assignment $assignment): Assignment
     {
-        return $this->transaction(function () use ($assignee, $assignment): Assignment {
+        $declined = $this->transaction(function () use ($assignee, $assignment): Assignment {
             $current = $this->lockedAssignment($assignment);
 
             $this->ensureTargetedAssignee($current, $assignee);
@@ -101,6 +111,12 @@ final class AssignmentWriter
 
             return $assignment;
         });
+
+        if ($declined->cascade_id !== null) {
+            app(OfferCascade::class)->advance($declined);
+        }
+
+        return $declined;
     }
 
     public function reassign(
@@ -178,7 +194,7 @@ final class AssignmentWriter
     {
         return $this->transaction(function () use ($assignable, $role): Assignment {
             $assignment = $this->slotQuery($assignable, $role)
-                ->where('status', AssignmentStatus::Active->value)
+                ->open()
                 ->lockForUpdate()
                 ->first();
 
@@ -212,6 +228,27 @@ final class AssignmentWriter
             $this->end($current, EndReason::Completed);
 
             $this->syncInstance($assignment, $current);
+
+            return $assignment;
+        });
+    }
+
+    public function expire(int|string $assignmentId): ?Assignment
+    {
+        return $this->transaction(function () use ($assignmentId): ?Assignment {
+            $query = Assignment::query()
+                ->whereKey($assignmentId)
+                ->where('status', AssignmentStatus::Offered->value)
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<=', now());
+            $assignment = $this->claimer->claim($query);
+
+            if ($assignment === null) {
+                return null;
+            }
+
+            $this->end($assignment, EndReason::Expired);
+            Event::dispatch(new OfferExpired($assignment));
 
             return $assignment;
         });
@@ -291,6 +328,7 @@ final class AssignmentWriter
             'slot' => AssignmentSlot::for($data->role),
             'status' => $data->status,
             'scope' => $data->scope,
+            'cascade_id' => $data->cascadeId,
             'assigned_by_type' => $data->by?->getMorphClass(),
             'assigned_by_id' => $data->by?->getKey(),
         ];
@@ -311,6 +349,15 @@ final class AssignmentWriter
             ->where('assignable_id', $data->assignable->getKey())
             ->where('slot', AssignmentSlot::for($data->role))
             ->delete();
+
+        if ($assignment->cascade_id !== null && $assignment->expires_at !== null) {
+            if (config('assignment.dispatch_expiry_jobs') === true) {
+                Bus::dispatch(
+                    (new AdvanceExpiredOffer(ModelIdentity::key($assignment)))
+                        ->delay($assignment->expires_at),
+                );
+            }
+        }
 
         return $assignment;
     }

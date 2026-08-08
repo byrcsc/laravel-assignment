@@ -40,6 +40,7 @@ final class PendingAssignment
         private readonly AssignmentQueue $queue,
         private readonly ScopeStateRepository $states,
         private readonly SelectionPolicyResolver $policies,
+        private readonly ?string $cascadeId = null,
     ) {}
 
     /** @param iterable<mixed>|Closure $candidates */
@@ -132,6 +133,7 @@ final class PendingAssignment
                     $this->actor,
                     $this->ttlSeconds,
                     $scope,
+                    $this->cascadeId,
                 )
                 : $this->writer->assign(
                     $this->assignable,

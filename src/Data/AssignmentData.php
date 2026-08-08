@@ -17,5 +17,6 @@ final readonly class AssignmentData
         public ?Model $by = null,
         public ?string $scope = null,
         public ?int $ttlSeconds = null,
+        public ?string $cascadeId = null,
     ) {}
 }
