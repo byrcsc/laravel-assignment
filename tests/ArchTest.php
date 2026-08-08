@@ -9,3 +9,7 @@ arch('no debugging leftovers ship')
 arch('everything declares strict types')
     ->expect('ByRcsc\LaravelAssignment')
     ->toUseStrictTypes();
+
+arch('enums are string backed')
+    ->expect('ByRcsc\LaravelAssignment\Enums')
+    ->toBeStringBackedEnums();
