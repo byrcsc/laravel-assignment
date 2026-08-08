@@ -28,6 +28,15 @@ trait Assignable
         return app(AssignmentWriter::class)->unassign($this, $role, $by);
     }
 
+    public function offer(
+        Model $assignee,
+        ?string $role = null,
+        ?Model $by = null,
+        ?int $ttlSeconds = null,
+    ): Assignment {
+        return app(AssignmentWriter::class)->offer($this, $assignee, $role, $by, $ttlSeconds);
+    }
+
     /** @return MorphMany<Assignment, $this> */
     public function assignments(): MorphMany
     {

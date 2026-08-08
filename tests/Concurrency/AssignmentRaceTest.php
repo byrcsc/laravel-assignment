@@ -36,7 +36,7 @@ it('allows exactly one concurrent assignment to claim a slot', function (): void
     $assignable = AssignableRecord::query()->create();
     $assignableId = $assignable->getKey();
 
-    $outcomes = ParallelRun::run(8, function () use ($assignableId): string {
+    $outcomes = ParallelRun::run(8, function (int $child) use ($assignableId): string {
         $assignable = AssignableRecord::query()->findOrFail($assignableId);
         $assignee = AssigneeRecord::query()->create();
 
@@ -74,7 +74,7 @@ it('allows one concurrent assignment to displace an offer that expires during th
 
     expect($offer->isExpired())->toBeFalse();
 
-    $outcomes = ParallelRun::run(6, function () use ($assignableId): string {
+    $outcomes = ParallelRun::run(6, function (int $child) use ($assignableId): string {
         $assignable = AssignableRecord::query()->findOrFail($assignableId);
         $assignee = AssigneeRecord::query()->create();
 

@@ -19,7 +19,7 @@ final class ParallelRun
     }
 
     /**
-     * @param  Closure(): string  $work
+     * @param  Closure(int): string  $work
      * @return list<string>
      */
     public static function run(int $processes, Closure $work, float $startDelay = 0.3): array
@@ -45,7 +45,7 @@ final class ParallelRun
             }
 
             if ($processId === 0) {
-                self::work("{$reports}/{$child}", $startAt, $work);
+                self::work("{$reports}/{$child}", $child, $startAt, $work);
             }
 
             $processIds[] = $processId;
@@ -60,14 +60,14 @@ final class ParallelRun
         return self::collect($reports, $processes);
     }
 
-    /** @param Closure(): string $work */
-    private static function work(string $report, float $startAt, Closure $work): never
+    /** @param Closure(int): string $work */
+    private static function work(string $report, int $child, float $startAt, Closure $work): never
     {
         try {
             DB::reconnect();
             usleep((int) max(0, ($startAt - microtime(true)) * 1_000_000));
 
-            $outcome = $work();
+            $outcome = $work($child);
         } catch (Throwable $throwable) {
             $outcome = 'failed: '.$throwable->getMessage();
         }

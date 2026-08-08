@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelAssignment\Concerns;
 
+use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
 use ByRcsc\LaravelAssignment\Models\Assignment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -15,6 +16,16 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  */
 trait Assignee
 {
+    public function accept(Assignment $assignment): Assignment
+    {
+        return app(AssignmentWriter::class)->accept($this, $assignment);
+    }
+
+    public function decline(Assignment $assignment): Assignment
+    {
+        return app(AssignmentWriter::class)->decline($this, $assignment);
+    }
+
     /** @return MorphMany<Assignment, $this> */
     public function assignments(): MorphMany
     {
