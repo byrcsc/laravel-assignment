@@ -9,7 +9,10 @@ use ByRcsc\LaravelAssignment\PendingAssignment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Facade;
 
-/** @method static PendingAssignment for(Model $assignable) */
+/**
+ * @method static PendingAssignment for(Model $assignable)
+ * @method static int flushQueue(?string $assignableType = null)
+ */
 final class Assignment extends Facade
 {
     protected static function getFacadeAccessor(): string

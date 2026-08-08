@@ -43,7 +43,7 @@ abstract class TestCase extends Orchestra
         $this->defineDatabaseMigrations();
     }
 
-    public function useForkableDatabase(): void
+    public function useForkableDatabase(string $transactionMode = 'IMMEDIATE'): void
     {
         if ($this->databaseDriver() !== 'sqlite') {
             return;
@@ -55,7 +55,7 @@ abstract class TestCase extends Orchestra
             'database.connections.testing.database' => $this->forkableDatabase,
             'database.connections.testing.journal_mode' => 'WAL',
             'database.connections.testing.busy_timeout' => 10_000,
-            'database.connections.testing.transaction_mode' => 'IMMEDIATE',
+            'database.connections.testing.transaction_mode' => $transactionMode,
         ]);
     }
 

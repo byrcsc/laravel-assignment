@@ -20,6 +20,8 @@ use ByRcsc\LaravelAssignment\Exceptions\NotTheAssignee;
 use ByRcsc\LaravelAssignment\Exceptions\OfferNotOpen;
 use ByRcsc\LaravelAssignment\Exceptions\SlotOccupied;
 use ByRcsc\LaravelAssignment\Models\Assignment;
+use ByRcsc\LaravelAssignment\Models\QueuedAssignment;
+use ByRcsc\LaravelAssignment\Support\AssignmentSlot;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -286,7 +288,7 @@ final class AssignmentWriter
             'assignee_type' => $data->assignee->getMorphClass(),
             'assignee_id' => $data->assignee->getKey(),
             'role' => $data->role,
-            'slot' => $this->slot($data->role),
+            'slot' => AssignmentSlot::for($data->role),
             'status' => $data->status,
             'scope' => $data->scope,
             'assigned_by_type' => $data->by?->getMorphClass(),
@@ -302,7 +304,15 @@ final class AssignmentWriter
             }
         }
 
-        return Assignment::query()->create($attributes);
+        $assignment = Assignment::query()->create($attributes);
+
+        QueuedAssignment::query()
+            ->where('assignable_type', $data->assignable->getMorphClass())
+            ->where('assignable_id', $data->assignable->getKey())
+            ->where('slot', AssignmentSlot::for($data->role))
+            ->delete();
+
+        return $assignment;
     }
 
     private function releaseExpiredOffer(Model $assignable, ?string $role): void
@@ -340,12 +350,7 @@ final class AssignmentWriter
         return Assignment::query()
             ->where('assignable_type', $assignable->getMorphClass())
             ->where('assignable_id', $assignable->getKey())
-            ->where('slot', $this->slot($role));
-    }
-
-    private function slot(?string $role): string
-    {
-        return $role ?? '';
+            ->where('slot', AssignmentSlot::for($role));
     }
 
     private function isUniqueConstraintViolation(QueryException $exception): bool

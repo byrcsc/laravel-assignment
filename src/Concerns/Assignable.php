@@ -7,6 +7,8 @@ namespace ByRcsc\LaravelAssignment\Concerns;
 use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
 use ByRcsc\LaravelAssignment\AssignmentManager;
 use ByRcsc\LaravelAssignment\Models\Assignment;
+use ByRcsc\LaravelAssignment\Models\QueuedAssignment;
+use ByRcsc\LaravelAssignment\Support\AssignmentSlot;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -77,6 +79,15 @@ trait Assignable
     public function isAssigned(?string $role = null): bool
     {
         return $this->assignmentQueryForRole($role)->open()->exists();
+    }
+
+    public function queuedAssignment(?string $role = null): ?QueuedAssignment
+    {
+        return QueuedAssignment::query()
+            ->where('assignable_type', $this->getMorphClass())
+            ->where('assignable_id', $this->getKey())
+            ->where('slot', AssignmentSlot::for($role))
+            ->first();
     }
 
     /** @return MorphMany<Assignment, $this> */

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelAssignment;
 
+use ByRcsc\LaravelAssignment\Actions\AssignmentQueue;
 use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
 use ByRcsc\LaravelAssignment\Contracts\SelectionPolicy;
 use ByRcsc\LaravelAssignment\Models\Assignment;
 use ByRcsc\LaravelAssignment\Models\AssignmentScope;
+use ByRcsc\LaravelAssignment\Models\QueuedAssignment;
 use ByRcsc\LaravelAssignment\Policies\Random;
 use ByRcsc\LaravelAssignment\Support\ModelIdentity;
 use ByRcsc\LaravelAssignment\Support\ScopeStateRepository;
@@ -35,6 +37,7 @@ final class PendingAssignment
     public function __construct(
         private readonly Model $assignable,
         private readonly AssignmentWriter $writer,
+        private readonly AssignmentQueue $queue,
         private readonly ScopeStateRepository $states,
         private readonly SelectionPolicyResolver $policies,
     ) {}
@@ -90,6 +93,11 @@ final class PendingAssignment
     public function offer(): ?Assignment
     {
         return $this->write(offer: true);
+    }
+
+    public function queue(int $priority = 0): QueuedAssignment
+    {
+        return $this->queue->enqueue($this->assignable, $this->role, $priority);
     }
 
     private function write(bool $offer): ?Assignment
