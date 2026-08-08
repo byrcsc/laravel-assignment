@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelAssignment\Actions;
 
+use ByRcsc\LaravelAssignment\Data\AssignmentData;
 use ByRcsc\LaravelAssignment\Enums\AssignmentStatus;
 use ByRcsc\LaravelAssignment\Enums\EndReason;
 use ByRcsc\LaravelAssignment\Events\Assigned;
 use ByRcsc\LaravelAssignment\Events\AssignmentAccepted;
 use ByRcsc\LaravelAssignment\Events\AssignmentDeclined;
 use ByRcsc\LaravelAssignment\Events\AssignmentOffered;
+use ByRcsc\LaravelAssignment\Events\Reassigned;
 use ByRcsc\LaravelAssignment\Events\Unassigned;
+use ByRcsc\LaravelAssignment\Exceptions\AlreadyAssigned;
 use ByRcsc\LaravelAssignment\Exceptions\InvalidTransition;
 use ByRcsc\LaravelAssignment\Exceptions\NotAssigned;
 use ByRcsc\LaravelAssignment\Exceptions\NotTheAssignee;
@@ -32,14 +35,14 @@ final class AssignmentWriter
         ?Model $by = null,
         ?string $scope = null,
     ): Assignment {
-        return $this->createAssignment(
-            $assignable,
-            $assignee,
-            AssignmentStatus::Active,
-            $role,
-            $by,
-            $scope,
-        );
+        return $this->createAssignment(new AssignmentData(
+            assignable: $assignable,
+            assignee: $assignee,
+            status: AssignmentStatus::Active,
+            role: $role,
+            by: $by,
+            scope: $scope,
+        ));
     }
 
     public function offer(
@@ -50,15 +53,15 @@ final class AssignmentWriter
         ?int $ttlSeconds = null,
         ?string $scope = null,
     ): Assignment {
-        return $this->createAssignment(
-            $assignable,
-            $assignee,
-            AssignmentStatus::Offered,
-            $role,
-            $by,
-            $scope,
-            $ttlSeconds,
-        );
+        return $this->createAssignment(new AssignmentData(
+            assignable: $assignable,
+            assignee: $assignee,
+            status: AssignmentStatus::Offered,
+            role: $role,
+            by: $by,
+            scope: $scope,
+            ttlSeconds: $ttlSeconds,
+        ));
     }
 
     public function accept(Model $assignee, Assignment $assignment): Assignment
@@ -98,52 +101,65 @@ final class AssignmentWriter
         });
     }
 
-    private function createAssignment(
+    public function reassign(
         Model $assignable,
-        Model $assignee,
-        AssignmentStatus $status,
-        ?string $role,
-        ?Model $by,
-        ?string $scope,
-        ?int $ttlSeconds = null,
+        Model $newAssignee,
+        ?string $role = null,
+        ?Model $by = null,
     ): Assignment {
-        try {
+        $observed = $this->slotQuery($assignable, $role)->open()->first();
+
+        if ($observed === null) {
+            throw new NotAssigned;
+        }
+
+        return $this->writeSlot(function () use ($assignable, $newAssignee, $role, $by, $observed): Assignment {
             return $this->transaction(function () use (
                 $assignable,
-                $assignee,
-                $status,
+                $newAssignee,
                 $role,
                 $by,
-                $scope,
-                $ttlSeconds,
+                $observed,
             ): Assignment {
-                $this->releaseExpiredOffer($assignable, $role);
+                $current = $this->slotQuery($assignable, $role)
+                    ->open()
+                    ->lockForUpdate()
+                    ->first();
 
-                $attributes = [
-                    'assignable_type' => $assignable->getMorphClass(),
-                    'assignable_id' => $assignable->getKey(),
-                    'assignee_type' => $assignee->getMorphClass(),
-                    'assignee_id' => $assignee->getKey(),
-                    'role' => $role,
-                    'slot' => $this->slot($role),
-                    'status' => $status,
-                    'scope' => $scope,
-                    'assigned_by_type' => $by?->getMorphClass(),
-                    'assigned_by_id' => $by?->getKey(),
-                ];
-
-                if ($status === AssignmentStatus::Offered) {
-                    $offeredAt = now();
-                    $attributes['offered_at'] = $offeredAt;
-
-                    if ($ttlSeconds !== null) {
-                        $attributes['expires_at'] = $offeredAt->copy()->addSeconds($ttlSeconds);
-                    }
+                if ($current === null || ! $current->is($observed)) {
+                    throw new SlotOccupied;
                 }
 
-                $assignment = Assignment::query()->create($attributes);
+                if ($this->isAssignedTo($current, $newAssignee)) {
+                    throw new AlreadyAssigned;
+                }
 
-                if ($status === AssignmentStatus::Active) {
+                $this->end($current, EndReason::Reassigned);
+                $replacement = $this->insertAssignment(new AssignmentData(
+                    assignable: $assignable,
+                    assignee: $newAssignee,
+                    status: AssignmentStatus::Active,
+                    role: $role,
+                    by: $by,
+                ));
+
+                Event::dispatch(new Unassigned($current));
+                Event::dispatch(new Assigned($replacement));
+                Event::dispatch(new Reassigned($current, $replacement));
+
+                return $replacement;
+            });
+        });
+    }
+
+    private function createAssignment(AssignmentData $data): Assignment
+    {
+        return $this->writeSlot(function () use ($data): Assignment {
+            return $this->transaction(function () use ($data): Assignment {
+                $this->releaseExpiredOffer($data->assignable, $data->role);
+                $assignment = $this->insertAssignment($data);
+
+                if ($data->status === AssignmentStatus::Active) {
                     Event::dispatch(new Assigned($assignment));
 
                     return $assignment;
@@ -153,13 +169,7 @@ final class AssignmentWriter
 
                 return $assignment;
             });
-        } catch (QueryException $exception) {
-            if (! $this->isUniqueConstraintViolation($exception)) {
-                throw $exception;
-            }
-
-            throw new SlotOccupied($exception);
-        }
+        });
     }
 
     public function unassign(Model $assignable, ?string $role = null, ?Model $by = null): Assignment
@@ -221,18 +231,7 @@ final class AssignmentWriter
 
     private function ensureTargetedAssignee(Assignment $assignment, Model $assignee): void
     {
-        if ($assignment->assignee_type !== $assignee->getMorphClass()) {
-            throw new NotTheAssignee;
-        }
-
-        $assignmentKey = $this->modelKeyString($assignment->assignee_id);
-        $assigneeKey = $this->modelKeyString($assignee->getKey());
-
-        if ($assignmentKey === null) {
-            throw new NotTheAssignee;
-        }
-
-        if ($assignmentKey !== $assigneeKey) {
+        if (! $this->isAssignedTo($assignment, $assignee)) {
             throw new NotTheAssignee;
         }
     }
@@ -246,6 +245,18 @@ final class AssignmentWriter
         if ($assignment->isExpired()) {
             throw new OfferNotOpen;
         }
+    }
+
+    private function isAssignedTo(Assignment $assignment, Model $assignee): bool
+    {
+        if ($assignment->assignee_type !== $assignee->getMorphClass()) {
+            return false;
+        }
+
+        $assignmentKey = $this->modelKeyString($assignment->assignee_id);
+        $assigneeKey = $this->modelKeyString($assignee->getKey());
+
+        return $assignmentKey !== null && $assignmentKey === $assigneeKey;
     }
 
     private function modelKeyString(mixed $key): ?string
@@ -265,6 +276,33 @@ final class AssignmentWriter
     {
         $assignment->setRawAttributes($current->getAttributes(), true);
         $assignment->setRelations([]);
+    }
+
+    private function insertAssignment(AssignmentData $data): Assignment
+    {
+        $attributes = [
+            'assignable_type' => $data->assignable->getMorphClass(),
+            'assignable_id' => $data->assignable->getKey(),
+            'assignee_type' => $data->assignee->getMorphClass(),
+            'assignee_id' => $data->assignee->getKey(),
+            'role' => $data->role,
+            'slot' => $this->slot($data->role),
+            'status' => $data->status,
+            'scope' => $data->scope,
+            'assigned_by_type' => $data->by?->getMorphClass(),
+            'assigned_by_id' => $data->by?->getKey(),
+        ];
+
+        if ($data->status === AssignmentStatus::Offered) {
+            $offeredAt = now();
+            $attributes['offered_at'] = $offeredAt;
+
+            if ($data->ttlSeconds !== null) {
+                $attributes['expires_at'] = $offeredAt->copy()->addSeconds($data->ttlSeconds);
+            }
+        }
+
+        return Assignment::query()->create($attributes);
     }
 
     private function releaseExpiredOffer(Model $assignable, ?string $role): void
@@ -382,6 +420,20 @@ final class AssignmentWriter
         }
 
         return null;
+    }
+
+    /** @param callable(): Assignment $callback */
+    private function writeSlot(callable $callback): Assignment
+    {
+        try {
+            return $callback();
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
+
+            throw new SlotOccupied($exception);
+        }
     }
 
     /**

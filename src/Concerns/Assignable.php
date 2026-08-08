@@ -37,6 +37,14 @@ trait Assignable
         return app(AssignmentWriter::class)->offer($this, $assignee, $role, $by, $ttlSeconds);
     }
 
+    public function reassign(
+        Model $newAssignee,
+        ?string $role = null,
+        ?Model $by = null,
+    ): Assignment {
+        return app(AssignmentWriter::class)->reassign($this, $newAssignee, $role, $by);
+    }
+
     /** @return MorphMany<Assignment, $this> */
     public function assignments(): MorphMany
     {
