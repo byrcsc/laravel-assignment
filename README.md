@@ -233,7 +233,7 @@ class LeadProfile extends AssignmentProfile
         return Seller::where('active', true)->get();
     }
 
-    public function policy(Model $lead, ?string $role): mixed
+    public function policy(Model $lead, ?string $role): string
     {
         return RoundRobin::class;
     }

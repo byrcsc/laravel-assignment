@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ByRcsc\LaravelAssignment\Concerns;
 
 use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
+use ByRcsc\LaravelAssignment\AssignmentManager;
 use ByRcsc\LaravelAssignment\Models\Assignment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -15,6 +16,11 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 trait Assignable
 {
+    public function autoAssign(?string $role = null): ?Assignment
+    {
+        return app(AssignmentManager::class)->autoAssign($this, $role);
+    }
+
     public function assign(
         Model $assignee,
         ?string $role = null,
