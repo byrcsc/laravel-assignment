@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelAssignment\Models;
 
+use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
 use ByRcsc\LaravelAssignment\Enums\AssignmentStatus;
 use ByRcsc\LaravelAssignment\Enums\EndReason;
 use Carbon\CarbonImmutable;
@@ -91,6 +92,11 @@ final class Assignment extends Model
         }
 
         return $this->expires_at->lessThanOrEqualTo(now());
+    }
+
+    public function complete(?Model $by = null): self
+    {
+        return app(AssignmentWriter::class)->complete($this, $by);
     }
 
     /**

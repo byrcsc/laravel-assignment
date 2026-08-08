@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ByRcsc\LaravelAssignment\Concerns;
 
+use ByRcsc\LaravelAssignment\Actions\AssignmentWriter;
 use ByRcsc\LaravelAssignment\Models\Assignment;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -14,6 +15,19 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 trait Assignable
 {
+    public function assign(
+        Model $assignee,
+        ?string $role = null,
+        ?Model $by = null,
+    ): Assignment {
+        return app(AssignmentWriter::class)->assign($this, $assignee, $role, $by);
+    }
+
+    public function unassign(?string $role = null, ?Model $by = null): Assignment
+    {
+        return app(AssignmentWriter::class)->unassign($this, $role, $by);
+    }
+
     /** @return MorphMany<Assignment, $this> */
     public function assignments(): MorphMany
     {

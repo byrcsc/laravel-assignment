@@ -323,7 +323,8 @@ alert) hangs off the events instead.
 
 ## Events
 
-Every transition fires an event; none ship with listeners.
+The package exposes these lifecycle events; none ship with application
+listeners.
 
 | Event | Fires when |
 |---|---|
