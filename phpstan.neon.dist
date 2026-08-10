@@ -5,6 +5,7 @@ parameters:
         - config
         - tests/Fixtures
         - tests/PublicApi
+        - workbench
     tmpDir: build/phpstan
 
     # Pest test files are closures against a reflection API that returns mixed,

@@ -19,6 +19,7 @@ _ide_helper_models.php
 
 # Editors
 /.idea
+/test-results
 /.fleet
 /.vscode
 

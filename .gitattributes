@@ -15,6 +15,16 @@
 
 # Planning documents — useful in the repo, dead weight in a vendor install.
 /issues             export-ignore
+/.scratch           export-ignore
+
+# Never tracked, so `git archive` drops these anyway. Listing them keeps
+# `composer archive`, which reads this file and not `.gitignore`, honest.
+/vendor             export-ignore
+/build              export-ignore
+/.idea              export-ignore
+/test-results       export-ignore
+/composer.lock      export-ignore
+.DS_Store           export-ignore
 
 # Repository governance — useful on GitHub, dead weight in a vendor install.
 /CONTRIBUTING.md    export-ignore
