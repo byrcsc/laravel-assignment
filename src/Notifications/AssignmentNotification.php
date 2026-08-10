@@ -30,9 +30,12 @@ abstract class AssignmentNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        // Markdown rather than a plain view: the shipped blades build on
+        // `mail::message`, and that view namespace only exists once the
+        // markdown renderer has been resolved.
         return (new MailMessage)
             ->subject($this->translated('subject'))
-            ->view($this->view(), [
+            ->markdown($this->view(), [
                 'assignment' => $this->assignment,
                 'body' => $this->translated('body'),
             ]);

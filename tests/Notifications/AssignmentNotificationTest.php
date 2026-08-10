@@ -142,3 +142,18 @@ it('silently skips assignees without the Notifiable trait', function (): void {
 
     Notification::assertNothingSent();
 });
+
+it('renders the shipped mail view of every notification', function (string $notification, string $body): void {
+    $assignable = ProfileAssignableRecord::query()->create();
+    $assignee = NotifiableAssigneeRecord::query()->create(['email' => 'assignee@example.test']);
+    $assignment = $assignable->assign($assignee);
+
+    $mail = (new $notification($assignment))->toMail($assignee);
+
+    expect((string) $mail->render())->toContain($body);
+})->with([
+    [OfferReceived::class, 'A new assignment offer is waiting for your response.'],
+    [OfferExpired::class, 'An assignment offer expired before it was accepted.'],
+    [AssignmentReceived::class, 'An assignment has been assigned to you.'],
+    [AssignmentRemoved::class, 'An assignment is no longer assigned to you.'],
+]);
