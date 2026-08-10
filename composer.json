@@ -14,6 +14,12 @@
     ],
     "homepage": "https://github.com/byrcsc/laravel-assignment",
     "license": "MIT",
+    "funding": [
+        {
+            "type": "buy_me_a_coffee",
+            "url": "https://www.buymeacoffee.com/ryancatapang"
+        }
+    ],
     "authors": [
         {
             "name": "Ryan Catapang",
