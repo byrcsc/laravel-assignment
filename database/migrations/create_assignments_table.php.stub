@@ -2,23 +2,105 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Migrations\Migration;
+namespace ByRcsc\LaravelAssignment\Database\Migrations;
 
-/*
- * The schema — `assignments`, `assignment_scopes`, `assignment_queue` — lands
- * with issue A2. This stub exists now so the `assignment-migrations` publish
- * tag and the workbench build's publish-then-migrate flow are exercised from
- * the first green build.
- */
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use InvalidArgumentException;
+
 return new class extends Migration
 {
     public function up(): void
     {
-        //
+        Schema::create($this->table('assignments'), function (Blueprint $table): void {
+            $table->id();
+            $table->string('assignable_type');
+            $this->addModelKey($table, 'assignable_id', $this->keyType('assignable_key_type'));
+            $table->string('assignee_type');
+            $this->addModelKey($table, 'assignee_id', $this->keyType('assignee_key_type'));
+            $table->string('assigned_by_type')->nullable();
+            $table->string('assigned_by_id')->nullable();
+            $table->string('role')->nullable();
+            $table->string('slot')->nullable();
+            $table->string('status');
+            $table->ulid('cascade_id')->nullable();
+            $table->string('scope')->nullable();
+            $table->timestamp('offered_at')->nullable();
+            $table->timestamp('accepted_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamp('ended_at')->nullable();
+            $table->string('ended_reason')->nullable();
+            $table->timestamps();
+
+            $table->unique(
+                ['assignable_type', 'assignable_id', 'slot'],
+                'assignments_open_slot_unique',
+            );
+            $table->index(
+                ['assignee_type', 'assignee_id', 'status'],
+                'assignments_assignee_status_index',
+            );
+            $table->index(
+                ['assignable_type', 'assignable_id', 'created_at'],
+                'assignments_assignable_created_index',
+            );
+            $table->index(
+                ['status', 'expires_at'],
+                'assignments_status_expires_index',
+            );
+            $table->index('cascade_id', 'assignments_cascade_index');
+        });
+
+        Schema::create($this->table('scopes'), function (Blueprint $table): void {
+            $table->id();
+            $table->string('scope')->unique();
+            $table->json('state');
+            $table->timestamps();
+        });
+
+        Schema::create($this->table('queue'), function (Blueprint $table): void {
+            $table->id();
+            $table->string('assignable_type');
+            $this->addModelKey($table, 'assignable_id', $this->keyType('assignable_key_type'));
+            $table->string('role')->nullable();
+            $table->string('slot');
+            $table->integer('priority')->default(0);
+            $table->timestamp('queued_at');
+            $table->timestamps();
+
+            $table->unique(
+                ['assignable_type', 'assignable_id', 'slot'],
+                'assignment_queue_open_slot_unique',
+            );
+        });
     }
 
     public function down(): void
     {
-        //
+        Schema::dropIfExists($this->table('queue'));
+        Schema::dropIfExists($this->table('scopes'));
+        Schema::dropIfExists($this->table('assignments'));
+    }
+
+    private function table(string $name): string
+    {
+        return (string) config("assignment.tables.{$name}");
+    }
+
+    private function keyType(string $name): string
+    {
+        return (string) config("assignment.{$name}");
+    }
+
+    private function addModelKey(Blueprint $table, string $column, string $type): void
+    {
+        match ($type) {
+            'id' => $table->unsignedBigInteger($column),
+            'uuid' => $table->uuid($column),
+            'ulid' => $table->ulid($column),
+            'string' => $table->string($column),
+            default => throw new InvalidArgumentException("Unsupported assignment key type [{$type}]."),
+        };
     }
 };

@@ -3,6 +3,7 @@ parameters:
     paths:
         - src
         - config
+        - tests/Fixtures
     tmpDir: build/phpstan
 
     # This is a package, so Larastan cannot boot an application to discover

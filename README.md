@@ -166,8 +166,8 @@ Per-assignee capacity caps work the same way: filter candidates by
   rotate.
 - `FirstAvailable` makes your query order the priority order: senior sellers
   first is `orderBy('tier')` and nothing else.
-- A closure receives the assignable, the candidates, and the scope, and
-  returns one candidate:
+- A closure receives the assignable and the candidates, and returns one
+  candidate:
 
 ```php
 ->using(fn ($lead, $candidates) => $candidates->sortByDesc('conversion_rate')->first())
@@ -190,8 +190,12 @@ $assignment = Assignment::for($delivery)
     ->offer();
 
 $driver->accept($assignment);   // offered -> active
-$driver->decline($assignment);  // offered -> ended (declined), cascade advances
+$driver->decline($assignment);  // offered -> ended (declined)
 ```
+
+Only profile-driven offers start a cascade because the profile is what lets
+the engine resolve candidates again later. An ad-hoc fluent `offer()` has no
+`cascade_id` and ends without advancing when it is declined or expires.
 
 `expiresIn()` puts an `expires_at` on the offer. The instant it passes, the
 offer stops holding its slot and counts as `expired` in history. No worker is
@@ -233,7 +237,7 @@ class LeadProfile extends AssignmentProfile
         return Seller::where('active', true)->get();
     }
 
-    public function policy(Model $lead, ?string $role): mixed
+    public function policy(Model $lead, ?string $role): string
     {
         return RoundRobin::class;
     }
@@ -323,7 +327,8 @@ alert) hangs off the events instead.
 
 ## Events
 
-Every transition fires an event; none ship with listeners.
+The package exposes these lifecycle events; none ship with application
+listeners.
 
 | Event | Fires when |
 |---|---|
@@ -344,8 +349,9 @@ Assignment is atomic on MySQL, PostgreSQL, and SQLite:
 - Two concurrent calls cannot both fill the same slot. The open-slot rule is
   a database constraint, and the loser gets an exception, not a duplicate.
 - Round robin cursors cannot skip or repeat a candidate under concurrency;
-  selection within one scope is serialized, and different scopes do not block
-  each other.
+  selection within one scope is serialized, while different scope rows are
+  locked independently. SQLite may still serialize writes at the database
+  level.
 
 ## Out of scope
 

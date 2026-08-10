@@ -31,3 +31,11 @@ it('publishes the migration under the assignment-migrations tag', function (): v
             ->and($destination)->toEndWith('create_assignments_table.php');
     }
 });
+
+it('publishes notification translations and mail views', function (): void {
+    $translations = ServiceProvider::pathsToPublish(AssignmentServiceProvider::class, 'assignment-translations');
+    $views = ServiceProvider::pathsToPublish(AssignmentServiceProvider::class, 'assignment-views');
+
+    expect($translations)->not->toBeEmpty()
+        ->and($views)->not->toBeEmpty();
+});
