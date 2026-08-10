@@ -104,9 +104,13 @@ final class PendingAssignment
     private function write(bool $offer): ?Assignment
     {
         $connection = (new AssignmentScope)->getConnection();
+        $scope = $this->resolvedScope();
 
-        return $connection->transaction(function () use ($offer): ?Assignment {
-            $scope = $this->resolvedScope();
+        // Seeded before the transaction opens, so the lock below takes a row
+        // lock on a committed row rather than a gap lock on a missing one.
+        $this->states->ensure($scope);
+
+        return $connection->transaction(function () use ($offer, $scope): ?Assignment {
             $state = $this->states->lock($scope);
             $candidates = $this->resolveCandidates();
 
