@@ -19,6 +19,10 @@ beforeEach(function (): void {
         $this->markTestSkipped(ParallelRun::UNSUPPORTED_REASON);
     }
 
+    if (ParallelRun::needsServerDatabase()) {
+        $this->markTestSkipped(ParallelRun::SINGLE_WRITER_REASON);
+    }
+
     $this->useForkableDatabase();
 
     Schema::create('test_assignables', function (Blueprint $table): void {
@@ -105,8 +109,10 @@ it('keeps round robin state independent across scopes', function (): void {
 });
 
 it('allows different scope policies to overlap on server databases', function (): void {
-    if (DB::getDriverName() === 'sqlite') {
-        $this->markTestSkipped('SQLite serializes database writes across scope rows.');
+    if (DB::getDriverName() !== 'pgsql') {
+        $this->markTestSkipped(
+            'SQLite serializes database writes across scope rows, and InnoDB gap locks reach past the row a scope matches.',
+        );
     }
 
     $assignableIds = collect(range(1, 4))

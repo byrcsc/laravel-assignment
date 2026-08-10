@@ -1,8 +1,10 @@
 name: run-tests
 
 on:
-  # `main` only: push and pull_request carry different refs, so a branch with
-  # an open pull request would run the whole matrix twice.
+  # Push is `main` only: push and pull_request carry different refs, so a
+  # branch with an open pull request would run the whole matrix twice. Pull
+  # requests are not filtered by base, so a stacked branch targeting another
+  # branch is still checked.
   push:
     branches: [main]
     paths:
@@ -12,7 +14,6 @@ on:
       - 'phpunit.xml.dist'
       - 'composer.json'
   pull_request:
-    branches: [main]
     paths:
       - '**.php'
       - '**.php.stub'

@@ -7,6 +7,7 @@ use ByRcsc\LaravelAssignment\Enums\EndReason;
 use ByRcsc\LaravelAssignment\Models\Assignment;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssignableRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssigneeRecord;
+use ByRcsc\LaravelAssignment\Tests\Fixtures\ProfileAssignableRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\UlidAssigneeRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\UuidAssignableRecord;
 use Carbon\CarbonImmutable;
@@ -103,8 +104,12 @@ it('counts active and unexpired offered workload with an optional type constrain
             'slot' => '',
         ],
         [
-            'assignable_type' => UuidAssignableRecord::class,
-            'assignable_id' => (string) Str::uuid(),
+            // Integer keyed on purpose: this row only has to be a second
+            // assignable type, and the table is migrated with the default
+            // `assignable_key_type` here, so a uuid would not fit the column
+            // on a database that enforces its column types.
+            'assignable_type' => ProfileAssignableRecord::class,
+            'assignable_id' => 9,
             'status' => AssignmentStatus::Offered,
             'slot' => '',
             'expires_at' => now()->addSecond(),
@@ -134,7 +139,7 @@ it('counts active and unexpired offered workload with an optional type constrain
         ->and($assignee->openAssignments()->count())->toBe(2)
         ->and($assignee->workload())->toBe(2)
         ->and($assignee->workload(AssignableRecord::class))->toBe(1)
-        ->and($assignee->workload(UuidAssignableRecord::class))->toBe(1);
+        ->and($assignee->workload(ProfileAssignableRecord::class))->toBe(1);
 });
 
 it('reads assignments through uuid assignables and ulid assignees', function (): void {
