@@ -8,6 +8,7 @@ use ByRcsc\LaravelAssignment\Contracts\SelectionPolicy;
 use Closure;
 use UnexpectedValueException;
 
+/** @internal */
 final class SelectionPolicyResolver
 {
     public function resolve(string|SelectionPolicy|Closure $policy): SelectionPolicy

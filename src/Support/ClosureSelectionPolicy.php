@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use UnexpectedValueException;
 
+/** @internal */
 final readonly class ClosureSelectionPolicy implements SelectionPolicy
 {
     public function __construct(private Closure $callback) {}

@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 
+/** @internal */
 final readonly class OfferCascade
 {
     public function __construct(

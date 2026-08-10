@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 
+/** @internal */
 final class AssignmentQueue
 {
     public function __construct(private readonly RowClaimer $claimer) {}

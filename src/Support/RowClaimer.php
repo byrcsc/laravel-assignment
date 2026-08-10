@@ -7,6 +7,7 @@ namespace ByRcsc\LaravelAssignment\Support;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
+/** @internal */
 final class RowClaimer
 {
     /**

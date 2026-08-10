@@ -4,7 +4,14 @@ parameters:
         - src
         - config
         - tests/Fixtures
+        - tests/PublicApi
     tmpDir: build/phpstan
+
+    # Pest test files are closures against a reflection API that returns mixed,
+    # so they are analysed by running them. The helper classes beside them are
+    # ordinary code and stay in scope.
+    excludePaths:
+        - tests/*/*Test.php
 
     # This is a package, so Larastan cannot boot an application to discover
     # where config files live. Point it at ours, otherwise every `env()` call in

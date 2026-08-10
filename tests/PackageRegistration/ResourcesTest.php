@@ -6,8 +6,6 @@ use ByRcsc\LaravelAssignment\AssignmentServiceProvider;
 use Illuminate\Support\ServiceProvider;
 
 it('registers the config file', function (): void {
-    // The keys land with issue A2; an array (rather than null) proves the
-    // file is registered and loaded.
     expect(config('assignment'))->toBeArray();
 });
 

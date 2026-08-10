@@ -7,6 +7,7 @@ namespace ByRcsc\LaravelAssignment\Support;
 use ByRcsc\LaravelAssignment\Models\AssignmentScope;
 use ByRcsc\LaravelAssignment\ScopeState;
 
+/** @internal */
 final class ScopeStateRepository
 {
     /**

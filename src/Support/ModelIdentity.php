@@ -7,6 +7,7 @@ namespace ByRcsc\LaravelAssignment\Support;
 use Illuminate\Database\Eloquent\Model;
 use UnexpectedValueException;
 
+/** @internal */
 final class ModelIdentity
 {
     public static function for(Model $model): string

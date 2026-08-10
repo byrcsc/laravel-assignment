@@ -7,6 +7,7 @@ namespace ByRcsc\LaravelAssignment\Data;
 use ByRcsc\LaravelAssignment\Enums\AssignmentStatus;
 use Illuminate\Database\Eloquent\Model;
 
+/** @internal */
 final readonly class AssignmentData
 {
     public function __construct(

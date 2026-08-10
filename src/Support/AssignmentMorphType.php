@@ -7,6 +7,7 @@ namespace ByRcsc\LaravelAssignment\Support;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
+/** @internal */
 final class AssignmentMorphType
 {
     public static function for(string $type): string|int

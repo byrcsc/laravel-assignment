@@ -9,6 +9,7 @@ use ByRcsc\LaravelAssignment\Exceptions\NoProfile;
 use Illuminate\Database\Eloquent\Model;
 use UnexpectedValueException;
 
+/** @internal */
 final class AssignmentProfileResolver
 {
     public function resolve(Model $assignable): AssignmentProfile
