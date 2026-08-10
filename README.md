@@ -51,14 +51,14 @@ php artisan vendor:publish --tag="assignment-views"
 
 ## What an assignment is
 
-An **assignment** binds one **assignee** (any model: a user, a driver, a team)
-to one **assignable** (any model: a lead, an order, a ticket, a delivery),
+An **assignment** binds one **assignee** (any model: a user, a crew, a team)
+to one **assignable** (any model: an enquiry, an order, a ticket, a callout),
 optionally under a **role**. The rules are small and strict:
 
 - At most one **open** assignment per assignable and role. Open means
   `offered` or `active`. The role is optional; leave it off and an assignable
-  has at most one assignee. Use roles and one delivery holds a driver and a
-  seller concurrently. The rule is enforced by the database, not by
+  has at most one assignee. Use roles and one callout holds a crew and a
+  tradie concurrently. The rule is enforced by the database, not by
   application code.
 - Two verbs create assignments. `assign()` creates an `active` assignment
   immediately. `offer()` creates an `offered` assignment that the assignee
@@ -84,12 +84,12 @@ that take assignments:
 use ByRcsc\LaravelAssignment\Concerns\Assignable;
 use ByRcsc\LaravelAssignment\Concerns\Assignee;
 
-class Lead extends Model
+class Enquiry extends Model
 {
     use Assignable;
 }
 
-class Seller extends Model
+class Tradie extends Model
 {
     use Assignee;
 }
@@ -98,15 +98,15 @@ class Seller extends Model
 Assign manually, read state, and end assignments:
 
 ```php
-$lead->assign($seller);                  // active immediately
-$lead->assignee();                       // the Seller, or null
-$lead->reassign($otherSeller);           // atomic: ends the old row, creates the new one
-$lead->unassign();                       // ends with reason unassigned
-$lead->assignments;                      // the full history, oldest first
+$enquiry->assign($tradie);                  // active immediately
+$enquiry->assignee();                       // the Tradie, or null
+$enquiry->reassign($otherTradie);           // atomic: ends the old row, creates the new one
+$enquiry->unassign();                       // ends with reason unassigned
+$enquiry->assignments;                      // the full history, oldest first
 
-$delivery->assign($driver, role: 'driver');
-$delivery->assign($seller, role: 'seller');
-$delivery->assignee('driver');           // the Driver
+$callout->assign($crew, role: 'crew');
+$callout->assign($tradie, role: 'supervisor');
+$callout->assignee('crew');           // the Crew
 ```
 
 `assign()` on an occupied slot throws; reassignment is an explicit verb.
@@ -118,16 +118,16 @@ one:
 use ByRcsc\LaravelAssignment\Facades\Assignment;
 use ByRcsc\LaravelAssignment\Policies\RoundRobin;
 
-Assignment::for($lead)
-    ->among(Seller::where('active', true)->get())
-    ->scope('campaign:'.$lead->campaign_id)
+Assignment::for($enquiry)
+    ->among(Tradie::where('available', true)->get())
+    ->scope('trade:'.$enquiry->trade)
     ->using(RoundRobin::class)
     ->assign();
 ```
 
-Every lead from that campaign rotates through the same cursor, so sellers take
+Every enquiry from that trade rotates through the same cursor, so tradies take
 turns fairly even though you rebuild the candidate list on every call.
-Another campaign, another cursor.
+Another trade, another cursor.
 
 The builder is the same for both modes:
 
@@ -152,20 +152,20 @@ policy picks nobody. Everything else throws.
 The policy list deliberately contains no territory policy and no skill policy.
 Who *can* take an assignment (territory, skills, shift, capacity) is a query
 on data your application already owns. Who *gets* it, among the eligible, is
-what the engine decides. Territory-based assignment is therefore a query plus
+what the engine decides. Routing by suburb is therefore a query plus
 a scope, not a feature:
 
 ```php
-Assignment::for($delivery)
-    ->among(Driver::where('territory', $delivery->city)->where('online', true)->get())
-    ->role('driver')
-    ->scope('territory:'.$delivery->city)
+Assignment::for($callout)
+    ->among(Crew::where('suburb', $callout->suburb)->where('available', true)->get())
+    ->role('crew')
+    ->scope('suburb:'.$callout->suburb)
     ->using(LeastWorkload::class)
     ->assign();
 ```
 
 Per-assignee capacity caps work the same way: filter candidates by
-`$driver->workload() < 3` before passing them in.
+`$crew->workload() < 3` before passing them in.
 
 ## Selection policies
 
@@ -178,17 +178,17 @@ Per-assignee capacity caps work the same way: filter candidates by
 | Any closure | Whatever you return | Yours |
 
 - `LeastWorkload` counts open assignments: `active` plus `offered`, so ten
-  unanswered offers cannot pile onto one idle driver. Constrain the count to
-  one assignable type with `LeastWorkload::of(Delivery::class)`. Ties break
+  unanswered offers cannot pile onto one idle crew. Constrain the count to
+  one assignable type with `LeastWorkload::of(Callout::class)`. Ties break
   toward the least recently assigned candidate, so equal workloads still
   rotate.
-- `FirstAvailable` makes your query order the priority order: senior sellers
-  first is `orderBy('tier')` and nothing else.
+- `FirstAvailable` makes your query order the priority order: senior tradies
+  first is `orderBy('grade')` and nothing else.
 - A closure receives the assignable and the candidates, and returns one
   candidate:
 
 ```php
-->using(fn ($lead, $candidates) => $candidates->sortByDesc('conversion_rate')->first())
+->using(fn ($enquiry, $candidates) => $candidates->sortByDesc('rating')->first())
 ```
 
 A reusable policy is a class implementing `SelectionPolicy`:
@@ -221,15 +221,15 @@ skipping or repeating a turn under concurrency.
 Use `offer()` when the assignee gets a say:
 
 ```php
-$assignment = Assignment::for($delivery)
-    ->among($drivers)
-    ->role('driver')
+$assignment = Assignment::for($callout)
+    ->among($crews)
+    ->role('crew')
     ->using(LeastWorkload::class)
     ->expiresIn(120)
     ->offer();
 
-$driver->accept($assignment);   // offered -> active
-$driver->decline($assignment);  // offered -> ended (declined)
+$crew->accept($assignment);   // offered -> active
+$crew->decline($assignment);  // offered -> ended (declined)
 ```
 
 Only profile-driven offers start a cascade because the profile is what lets
@@ -269,21 +269,21 @@ the queue, where no fluent chain exists:
 ```php
 use ByRcsc\LaravelAssignment\AssignmentProfile;
 
-class LeadProfile extends AssignmentProfile
+class EnquiryProfile extends AssignmentProfile
 {
-    public function candidates(Model $lead, ?string $role): iterable
+    public function candidates(Model $enquiry, ?string $role): iterable
     {
-        return Seller::where('active', true)->get();
+        return Tradie::where('available', true)->get();
     }
 
-    public function policy(Model $lead, ?string $role): string
+    public function policy(Model $enquiry, ?string $role): string
     {
         return RoundRobin::class;
     }
 
-    public function scope(Model $lead, ?string $role): ?string
+    public function scope(Model $enquiry, ?string $role): ?string
     {
-        return 'campaign:'.$lead->campaign_id;
+        return 'trade:'.$enquiry->trade;
     }
 }
 ```
@@ -293,15 +293,15 @@ Register it and trigger it:
 ```php
 // config/assignment.php
 'profiles' => [
-    Lead::class => LeadProfile::class,
+    Enquiry::class => EnquiryProfile::class,
 ],
 ```
 
 ```php
-$lead->autoAssign();            // candidates, policy, scope all come from the profile
-$delivery->autoAssign('driver');
+$enquiry->autoAssign();            // candidates, policy, scope all come from the profile
+$callout->autoAssign('crew');
 
-Assignment::autoAssign($lead);  // the same thing without the trait
+Assignment::autoAssign($enquiry);  // the same thing without the trait
 ```
 
 Profiles also define the optional behavior: `mode()` returns `Mode::Assign`
@@ -314,13 +314,13 @@ are no candidates, and `queuePriority()` orders it within the queue.
 When auto-assignment finds no candidates, the assignable waits instead of
 falling on the floor. Queued assignables are flushed in priority order, then
 first in, first out. Flushing re-resolves everything through the profile, so
-a driver coming online or a seller being activated is picked up by the next
+a crew becoming available or a tradie being activated is picked up by the next
 flush:
 
 ```php
 Assignment::flushQueue();                 // or let assignment:tick do it
-Assignment::flushQueue(Lead::class);      // one assignable type only
-$lead->queuedAssignment();                // is it waiting?
+Assignment::flushQueue(Enquiry::class);      // one assignable type only
+$enquiry->queuedAssignment();                // is it waiting?
 ```
 
 `flushQueue()` returns how many entries it managed to assign. A queue entry is
@@ -330,11 +330,11 @@ assignable yourself with the builder when you want to reserve its place before
 any candidates exist:
 
 ```php
-Assignment::for($lead)->role('seller')->queue(priority: 10);
+Assignment::for($callout)->role('supervisor')->queue(priority: 10);
 ```
 
 `AssignableQueued` fires when something enters the queue. Flush from a
-listener on your own domain events (driver came online), from the tick, or
+listener on your own domain events (a crew became available), from the tick, or
 both.
 
 ## Status and history
@@ -348,10 +348,10 @@ polymorphic `assigned_by` recording who or what created it; null means the
 engine did.
 
 ```php
-$delivery->assignments()->ended()->get();     // past holders
-$driver->activeAssignments;                   // current work
-$driver->openAssignments;                     // active plus unanswered offers
-$driver->workload();                          // open assignment count
+$callout->assignments()->ended()->get();     // past holders
+$crew->activeAssignments;                   // current work
+$crew->openAssignments;                     // active plus unanswered offers
+$crew->workload();                          // open assignment count
 $assignment->complete();                      // ends with reason completed
 ```
 
@@ -408,7 +408,16 @@ removable in the config; set one to `null` to silence it:
     'assigned'      => AssignmentReceived::class,
     'unassigned'    => AssignmentRemoved::class,
 ],
-'notification_channels' => ['mail', 'database'],
+'notification_channels' => ['mail'],
+```
+
+Mail is the only channel on by default, because it is the only one that needs
+nothing installed. Add `'database'` once your application has Laravel's
+`notifications` table:
+
+```bash
+php artisan make:notifications-table
+php artisan migrate
 ```
 
 Assignees that are not `Notifiable` (a Team model, for instance) are skipped
@@ -493,4 +502,5 @@ Everything gets read.
 
 ## License
 
-The MIT License (MIT). See [LICENSE.md](LICENSE.md).
+The MIT License (MIT). See [LICENSE.md](LICENSE.md). Release notes are in
+[CHANGELOG.md](CHANGELOG.md).

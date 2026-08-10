@@ -67,15 +67,18 @@ change a public seam, run it and fix what broke.
 ## Where tests go
 
 Group tests by behavior, not by class, and extend the group that owns the
-behavior rather than adding a parallel suite for a class. `tests/ArchTest.php`
-currently enforces strict types and rejects leftover debugging calls.
+behavior rather than adding a parallel suite for a class. The directories in
+`tests/` are named after behavior for that reason: `Lifecycle/`, `Offer/`,
+`Selection/`, `Cascade/`, `Queue/`, `Profiles/`, `Read/`, `Persistence/`,
+`Notifications/`, `Concurrency/`, and `PackageRegistration/`. A new area gets
+a directory named the same way rather than after the class you happened to
+write.
 
-The package is in active construction, so the group layout is still forming.
-When you add the first test for an area, name the directory after the behavior
-(`Assign/`, `Offer/`, `Select/`, `Lifecycle/`) rather than after the class you
-happened to write. Architecture checks are added with the surfaces they can
-enforce; string-backed enums and a single exception root are required once
-those types exist.
+`tests/ArchTest.php` enforces strict types, rejects leftover debugging calls,
+and requires string-backed enums and a single exception root.
+`tests/PublicApi/` pins the public API itself: a signature, an enum case, an
+event payload, or a config key that changes without the manifest changing
+with it fails the suite.
 
 ## What a good change looks like
 
