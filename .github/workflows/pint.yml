@@ -10,7 +10,6 @@ on:
       - 'composer.json'
       - '.github/workflows/pint.yml'
   pull_request:
-    branches: [main]
     paths:
       - '**.php'
       - '**.php.stub'

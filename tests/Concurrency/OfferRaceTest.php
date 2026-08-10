@@ -18,6 +18,10 @@ beforeEach(function (): void {
         $this->markTestSkipped(ParallelRun::UNSUPPORTED_REASON);
     }
 
+    if (ParallelRun::needsServerDatabase()) {
+        $this->markTestSkipped(ParallelRun::SINGLE_WRITER_REASON);
+    }
+
     $this->useForkableDatabase();
 
     Schema::create('test_assignables', function (Blueprint $table): void {
