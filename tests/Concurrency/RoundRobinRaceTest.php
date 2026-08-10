@@ -19,6 +19,10 @@ beforeEach(function (): void {
         $this->markTestSkipped(ParallelRun::UNSUPPORTED_REASON);
     }
 
+    if (ParallelRun::needsServerDatabase()) {
+        $this->markTestSkipped(ParallelRun::SINGLE_WRITER_REASON);
+    }
+
     $this->useForkableDatabase();
 
     Schema::create('test_assignables', function (Blueprint $table): void {
@@ -34,10 +38,6 @@ afterEach(function (): void {
 });
 
 it('serializes first-use round robin selection within one scope', function (): void {
-    if (DB::getDriverName() === 'sqlite') {
-        $this->markTestSkipped('SQLite takes one writer at a time, so eight of them measure busy timeout, not rotation.');
-    }
-
     $assignableIds = collect(range(1, 8))
         ->map(fn (): mixed => AssignableRecord::query()->create()->getKey())
         ->all();
