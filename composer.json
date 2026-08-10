@@ -90,7 +90,7 @@
     "support": {
         "issues": "https://github.com/byrcsc/laravel-assignment/issues",
         "forum": "https://github.com/byrcsc/laravel-assignment/discussions",
-        "docs": "https://github.com/byrcsc/laravel-assignment#readme",
+        "docs": "https://docs.rcsc.dev/laravel-assignment/v1/introduction",
         "security": "https://github.com/byrcsc/laravel-assignment/security/policy",
         "source": "https://github.com/byrcsc/laravel-assignment"
     }
