@@ -13,9 +13,17 @@ final class ParallelRun
 {
     public const string UNSUPPORTED_REASON = 'This test needs ext-pcntl and ext-posix.';
 
+    public const string SINGLE_WRITER_REASON = 'SQLite takes one writer at a time, so a forked race measures its busy timeout rather than the guarantee under test.';
+
     public static function isSupported(): bool
     {
         return function_exists('pcntl_fork') && function_exists('posix_kill');
+    }
+
+    /** SQLite serializes every writer, so a race against it proves nothing the server engines do not. */
+    public static function needsServerDatabase(): bool
+    {
+        return DB::getDriverName() === 'sqlite';
     }
 
     /**
