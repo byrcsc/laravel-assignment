@@ -408,7 +408,16 @@ removable in the config; set one to `null` to silence it:
     'assigned'      => AssignmentReceived::class,
     'unassigned'    => AssignmentRemoved::class,
 ],
-'notification_channels' => ['mail', 'database'],
+'notification_channels' => ['mail'],
+```
+
+Mail is the only channel on by default, because it is the only one that needs
+nothing installed. Add `'database'` once your application has Laravel's
+`notifications` table:
+
+```bash
+php artisan make:notifications-table
+php artisan migrate
 ```
 
 Assignees that are not `Notifiable` (a Team model, for instance) are skipped

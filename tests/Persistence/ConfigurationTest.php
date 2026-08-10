@@ -15,6 +15,6 @@ it('ships the assignment persistence and automation defaults', function (): void
             'offer_expired' => 'ByRcsc\\LaravelAssignment\\Notifications\\OfferExpired',
             'assigned' => 'ByRcsc\\LaravelAssignment\\Notifications\\AssignmentReceived',
             'unassigned' => 'ByRcsc\\LaravelAssignment\\Notifications\\AssignmentRemoved',
-        ])->and(config('assignment.notification_channels'))->toBe(['mail', 'database'])
+        ])->and(config('assignment.notification_channels'))->toBe(['mail'])
         ->and(config('assignment.dispatch_expiry_jobs'))->toBeFalse();
 });

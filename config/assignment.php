@@ -21,7 +21,9 @@ return [
         'unassigned' => 'ByRcsc\\LaravelAssignment\\Notifications\\AssignmentRemoved',
     ],
 
-    'notification_channels' => ['mail', 'database'],
+    // Adding 'database' requires Laravel's notifications table, which
+    // `php artisan make:notifications-table` creates.
+    'notification_channels' => ['mail'],
 
     'dispatch_expiry_jobs' => false,
 ];

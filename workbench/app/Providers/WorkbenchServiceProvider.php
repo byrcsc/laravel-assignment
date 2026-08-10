@@ -35,6 +35,9 @@ final class WorkbenchServiceProvider extends ServiceProvider
                 Enquiry::class => EnquiryProfile::class,
                 Callout::class => CalloutProfile::class,
             ],
+            // The demo ships a notifications table, so it can watch the
+            // database channel as well as the log.
+            'assignment.notification_channels' => ['mail', 'database'],
             // Flip to true, and QUEUE_CONNECTION off `sync`, to watch the
             // delayed expiry jobs instead of the tick. It is a literal rather
             // than an `ASSIGNMENT_*` variable because `workbench/.env` is
