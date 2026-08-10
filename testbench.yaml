@@ -1,8 +1,10 @@
 laravel: '@testbench'
 
+# The package registers first so the demo provider can override its config the
+# way a published `config/assignment.php` would.
 providers:
-  - Workbench\App\Providers\WorkbenchServiceProvider
   - ByRcsc\LaravelAssignment\AssignmentServiceProvider
+  - Workbench\App\Providers\WorkbenchServiceProvider
 
 migrations:
   - workbench/database/migrations
@@ -29,6 +31,7 @@ workbench:
     - vendor-publish:
         --tag: assignment-migrations
         --force: true
+    # The seeders listed above run as part of this step.
     - migrate-fresh
 
 # Environment lives in `workbench/.env`, which Testbench copies into the
