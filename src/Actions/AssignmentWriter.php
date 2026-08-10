@@ -33,6 +33,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 
+/** @internal */
 final class AssignmentWriter
 {
     public function __construct(private readonly RowClaimer $claimer) {}

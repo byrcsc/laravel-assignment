@@ -129,6 +129,24 @@ Every lead from that campaign rotates through the same cursor, so sellers take
 turns fairly even though you rebuild the candidate list on every call.
 Another campaign, another cursor.
 
+The builder is the same for both modes:
+
+| Method | Does |
+|---|---|
+| `Assignment::for($assignable)` | Starts the chain |
+| `among($candidates)` | The candidates: a collection, an array, or a closure returning either |
+| `role($role)` | Which slot to fill |
+| `scope($scope)` | The state key stateful policies rotate on |
+| `using($policy)` | A policy class name, an instance, or a closure |
+| `by($actor)` | Records the actor in `assigned_by` |
+| `expiresIn($seconds)` | Puts an `expires_at` on an offer |
+| `assign()` | Creates the assignment, active |
+| `offer()` | Creates the offer, pending an answer |
+| `queue($priority)` | Parks the assignable in the queue instead |
+
+`assign()` and `offer()` return `null` when the candidate list is empty or the
+policy picks nobody. Everything else throws.
+
 ## Eligibility is yours, selection is the engine's
 
 The policy list deliberately contains no territory policy and no skill policy.
@@ -173,9 +191,30 @@ Per-assignee capacity caps work the same way: filter candidates by
 ->using(fn ($lead, $candidates) => $candidates->sortByDesc('conversion_rate')->first())
 ```
 
+A reusable policy is a class implementing `SelectionPolicy`:
+
+```php
+use ByRcsc\LaravelAssignment\Contracts\SelectionPolicy;
+use ByRcsc\LaravelAssignment\ScopeState;
+
+final class HighestRated implements SelectionPolicy
+{
+    public function select(Model $assignable, Collection $candidates, ScopeState $state): ?Model
+    {
+        return $candidates->sortByDesc('rating')->first();
+    }
+}
+```
+
+Return `null` to select nobody. Returning a model that is not in `$candidates`
+is an error, so a policy cannot smuggle in an ineligible assignee.
+
 Stateful policies key their state on the scope string. Omit `scope()` and the
 default is derived from the assignable class and role, which gives one global
-rotation per model type for free.
+rotation per model type for free. `ScopeState` is that state: `get($key,
+$default)`, `put($key, $value)`, and `persist()` to write it back. The row is
+locked for the length of the selection, which is what keeps a cursor from
+skipping or repeating a turn under concurrency.
 
 ## Offers
 
@@ -261,6 +300,8 @@ Register it and trigger it:
 ```php
 $lead->autoAssign();            // candidates, policy, scope all come from the profile
 $delivery->autoAssign('driver');
+
+Assignment::autoAssign($lead);  // the same thing without the trait
 ```
 
 Profiles also define the optional behavior: `mode()` returns `Mode::Assign`
@@ -278,7 +319,18 @@ flush:
 
 ```php
 Assignment::flushQueue();                 // or let assignment:tick do it
+Assignment::flushQueue(Lead::class);      // one assignable type only
 $lead->queuedAssignment();                // is it waiting?
+```
+
+`flushQueue()` returns how many entries it managed to assign. A queue entry is
+a `QueuedAssignment`: its `assignable` relation, the `role` it is waiting for,
+its `priority`, and the `queued_at` timestamp that breaks ties. Queue an
+assignable yourself with the builder when you want to reserve its place before
+any candidates exist:
+
+```php
+Assignment::for($lead)->role('seller')->queue(priority: 10);
 ```
 
 `AssignableQueued` fires when something enters the queue. Flush from a
@@ -298,9 +350,49 @@ engine did.
 ```php
 $delivery->assignments()->ended()->get();     // past holders
 $driver->activeAssignments;                   // current work
+$driver->openAssignments;                     // active plus unanswered offers
 $driver->workload();                          // open assignment count
 $assignment->complete();                      // ends with reason completed
 ```
+
+Both traits read the same rows from their own side:
+
+| On an assignable | Gives |
+|---|---|
+| `assignment($role)` | The active assignment, or null |
+| `openAssignment($role)` | The active assignment or the offer holding the slot |
+| `assignee($role)` | The assignee model, or null |
+| `isAssigned($role)` | Whether the slot has an active assignment |
+| `queuedAssignment($role)` | The queue entry, if it is waiting |
+| `assignments` | Every row, oldest first |
+
+| On an assignee | Gives |
+|---|---|
+| `assignments` | Every row, oldest first |
+| `activeAssignments` | The active ones |
+| `openAssignments` | Active plus unanswered offers |
+| `workload($assignableType)` | How many are open, optionally of one type |
+
+An `Assignment` answers `isOffered()`, `isActive()`, `isEnded()`,
+`isExpired()`, and `isOpen()`, and carries `assignable()`, `assignee()`, and
+`assignedBy()` relations. Its query scopes are `open()`, `active()`,
+`offered()`, `ended()`, and `expired()`, and each one respects `expires_at`
+rather than trusting the stored status alone.
+
+## Exceptions
+
+Every exception the engine throws extends `AssignmentException`, so one catch
+block covers the lot:
+
+| Exception | Thrown when |
+|---|---|
+| `SlotOccupied` | The slot was already held, or a concurrent writer won it first |
+| `AlreadyAssigned` | The assignee already holds the slot, or a queued assignable is already assigned |
+| `NotAssigned` | `unassign()` or `reassign()` found nothing open to end |
+| `NotTheAssignee` | Somebody other than the target answered an offer |
+| `OfferNotOpen` | The offer was already answered, or it has expired |
+| `InvalidTransition` | `complete()` ran on an assignment that is not active |
+| `NoProfile` | `autoAssign()` ran on a model with no registered profile |
 
 ## Notifications
 

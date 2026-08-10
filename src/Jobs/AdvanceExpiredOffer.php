@@ -8,6 +8,7 @@ use ByRcsc\LaravelAssignment\Actions\OfferCascade;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 
+/** @internal */
 final class AdvanceExpiredOffer implements ShouldQueueAfterCommit
 {
     use Queueable;

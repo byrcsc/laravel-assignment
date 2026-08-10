@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Notification;
 
+/** @internal */
 final class AssignmentNotificationListener
 {
     public function offered(AssignmentOffered $event): void
