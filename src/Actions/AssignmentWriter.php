@@ -98,7 +98,6 @@ final class AssignmentWriter
 
             return $assignment;
         });
-
     }
 
     public function decline(Model $assignee, Assignment $assignment): Assignment
@@ -228,16 +227,11 @@ final class AssignmentWriter
                 ->lockForUpdate()
                 ->first();
 
-            if ($current === null) {
-                throw new InvalidTransition;
-            }
-
-            if (! $current->isActive()) {
+            if ($current === null || ! $current->isActive()) {
                 throw new InvalidTransition;
             }
 
             $this->end($current, EndReason::Completed);
-
             $this->syncInstance($assignment, $current);
 
             return $assignment;
@@ -287,11 +281,7 @@ final class AssignmentWriter
 
     private function ensureOpenOffer(Assignment $assignment): void
     {
-        if (! $assignment->isOffered()) {
-            throw new OfferNotOpen;
-        }
-
-        if ($assignment->isExpired()) {
+        if (! $assignment->isOffered() || $assignment->isExpired()) {
             throw new OfferNotOpen;
         }
     }

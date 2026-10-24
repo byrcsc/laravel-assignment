@@ -73,14 +73,8 @@ final readonly class LeastWorkload implements SelectionPolicy
         foreach ($rows as $row) {
             $aggregate = $row->getAttribute('aggregate');
 
-            if (! is_int($aggregate)) {
-                if (! is_string($aggregate)) {
-                    throw new UnexpectedValueException('The workload aggregate must be numeric.');
-                }
-
-                if (! is_numeric($aggregate)) {
-                    throw new UnexpectedValueException('The workload aggregate must be numeric.');
-                }
+            if (! is_numeric($aggregate)) {
+                throw new UnexpectedValueException('The workload aggregate must be numeric.');
             }
 
             $workloads[$this->rowIdentity($row)] = (int) $aggregate;
