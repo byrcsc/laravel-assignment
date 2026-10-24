@@ -66,6 +66,9 @@ it('rejects an occupied slot and isolates roles', function (): void {
 
     expect(fn () => $assignable->assign($second, 'driver'))
         ->toThrow(SlotOccupied::class)
+        ->and(fn () => $assignable->assign($second, ''))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $assignable->assignee(''))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $assignable->isAssigned(''))->toThrow(InvalidArgumentException::class)
         ->and($assignable->openAssignment('driver')?->assignee->is($first))->toBeTrue()
         ->and($assignable->openAssignment('seller')?->assignee->is($second))->toBeTrue();
 });

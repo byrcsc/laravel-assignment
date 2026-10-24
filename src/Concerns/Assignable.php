@@ -93,12 +93,6 @@ trait Assignable
     /** @return MorphMany<Assignment, $this> */
     private function assignmentQueryForRole(?string $role): MorphMany
     {
-        $assignments = $this->assignments();
-
-        if ($role === null) {
-            return $assignments->whereNull('role');
-        }
-
-        return $assignments->where('role', $role);
+        return $this->assignments()->where('slot', AssignmentSlot::for($role));
     }
 }
