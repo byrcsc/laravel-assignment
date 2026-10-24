@@ -13,8 +13,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
- * Adds assignment history and current-state readers to an assignable model.
- * Laravel morph maps are honored when assignment type columns are written.
+ * Lets a model be assigned and offered, and reads its assignment history,
+ * open assignments, and queue entry. Laravel morph maps are honored when
+ * assignment type columns are written.
  */
 trait Assignable
 {
@@ -93,12 +94,6 @@ trait Assignable
     /** @return MorphMany<Assignment, $this> */
     private function assignmentQueryForRole(?string $role): MorphMany
     {
-        $assignments = $this->assignments();
-
-        if ($role === null) {
-            return $assignments->whereNull('role');
-        }
-
-        return $assignments->where('role', $role);
+        return $this->assignments()->where('slot', AssignmentSlot::for($role));
     }
 }

@@ -11,10 +11,10 @@ pluggable selection policies, fair per-scope rotation, a priority queue for
 work nobody can take yet, and offer cascades that pass unanswered offers to
 the next candidate.
 
-The package provides the assignment engine. Your application keeps ownership
-of its UI, users, teams, eligibility rules, and what being assigned actually
-means: you pass the candidates, the engine picks one fairly and atomically,
-records why, and fires plain Laravel events when the state changes.
+The package provides the assignment engine. Your application owns its UI,
+users, teams, eligibility rules, and what an assignment means. You pass the
+candidates. The engine picks one and writes the assignment atomically. It
+fires Laravel events when the state changes.
 
 | Laravel | Tested PHP versions |
 |---|---|
@@ -35,9 +35,9 @@ php artisan vendor:publish --tag="assignment-migrations"
 php artisan migrate
 ```
 
-Schedule the tick. Timestamps are authoritative, so an expired offer stops
-holding its slot whether or not the command has run; the tick is what
-advances cascades and flushes the queue.
+Schedule the tick. An offer stops holding its slot at its `expires_at`,
+whether or not the tick has run. The tick advances cascades and flushes the
+queue.
 
 ```php
 use Illuminate\Support\Facades\Schedule;
@@ -51,12 +51,12 @@ An **assignment** binds one **assignee** (any model: a user, a crew, a team)
 to one **assignable** (any model: an enquiry, an order, a ticket, a callout),
 optionally under a **role**.
 
-At most one **open** assignment exists per assignable and role, where open
-means `offered` or `active`, and the database enforces it rather than
-application code. `assign()` creates an active assignment immediately;
-`offer()` creates one the assignee must accept or decline, holding the slot
-while it stands. Assignments end, they are not deleted: an ended row records
-`ended_at` and why, so the rows are the history.
+At most one **open** assignment exists per assignable and role. Open means
+`offered` or `active`. A unique index enforces this, not application code.
+`assign()` creates an active assignment. `offer()` creates an assignment that
+the assignee must accept or decline, and the offer holds the slot until it is
+answered or expires. Assignments end instead of being deleted. An ended row
+records `ended_at` and `ended_reason`, so the rows are the history.
 
 ## Quick start
 
@@ -105,9 +105,11 @@ Assignment::for($enquiry)
 ```
 
 Every enquiry from that trade rotates through the same cursor, so tradies
-take turns fairly even though you rebuild the candidate list on every call.
-Swap `assign()` for `offer()` and the candidate gets a say, with declines and
-expiries cascading to the next one.
+take turns even though you rebuild the candidate list on every call. Call
+`offer()` instead of `assign()` to let the candidate accept or decline.
+Offers from the builder do not cascade. To pass a declined or expired offer
+to the next candidate, use `autoAssign()` with an offer-mode profile. See
+[offer cascades][offer-cascades].
 
 The builder is the same for both modes:
 
@@ -124,16 +126,18 @@ The builder is the same for both modes:
 | `offer()` | Creates the offer, pending an answer |
 | `queue($priority)` | Parks the assignable in the queue instead |
 
-`assign()` and `offer()` return `null` when the candidate list is empty or
-the policy picks nobody. Everything else throws.
+A role is a non-empty string, or `null` for the default slot.
+`expiresIn()` takes at least one second, or `null` for an offer that never
+expires. `assign()` and `offer()` return `null` when the candidate list is
+empty or the policy picks nobody. Every other failure throws.
 
 ## Eligibility is yours, selection is the engine's
 
-The policy list deliberately contains no territory policy and no skill
-policy. Who *can* take an assignment (territory, skills, shift, capacity) is
-a query on data your application already owns. Who *gets* it, among the
-eligible, is what the engine decides. Routing by suburb is therefore a query
-plus a scope, not a feature:
+The policy list contains no territory policy and no skill policy. Who *can*
+take an assignment (territory, skills, shift, capacity) is a query on data
+your application already owns. Who *gets* it, among the eligible, is what the
+engine decides. Routing by suburb is therefore a query plus a scope, not a
+feature:
 
 ```php
 Assignment::for($callout)
@@ -167,8 +171,8 @@ returns one candidate:
 ```
 
 Return `null` to select nobody. Returning a model that is not in
-`$candidates` is an error, so a policy cannot smuggle in an ineligible
-assignee. Reusable policies implement `SelectionPolicy`.
+`$candidates` throws, so a policy cannot pick an ineligible assignee.
+Reusable policies implement `SelectionPolicy`.
 
 ## Documentation
 
@@ -183,7 +187,7 @@ guides, operations advice, and API reference:
 
 ## Out of scope
 
-Things this package will not do, so you can build on what it does do:
+The package does not provide the following:
 
 - UI: no screens, no Livewire, no Nova resources. The engine is headless.
 - Database-defined pools, admin-editable rules, or pool membership tables.

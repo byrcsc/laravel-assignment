@@ -159,6 +159,15 @@ it('keeps candidate-less entries without retrying them in the same flush', funct
         ->and(QueuedAssignment::query()->count())->toBe(1);
 });
 
+it('drops entries whose assignable no longer exists', function (): void {
+    $assignable = ProfileAssignableRecord::query()->create();
+    AssignmentFacade::for($assignable)->queue();
+    $assignable->delete();
+
+    expect(AssignmentFacade::flushQueue())->toBe(0)
+        ->and(QueuedAssignment::query()->count())->toBe(0);
+});
+
 it('flushes assign and offer profiles through their configured modes', function (): void {
     CarbonImmutable::setTestNow('2026-08-08 12:00:00');
 
@@ -186,8 +195,17 @@ it('filters flushes by concrete or morph-mapped assignable type', function (): v
 
     $assignee = AssigneeRecord::query()->create();
     app(ProfileSettings::class)->candidates = [$assignee];
-    $assignable = ProfileAssignableRecord::query()->create();
-    AssignmentFacade::for($assignable)->queue();
+    $byClass = ProfileAssignableRecord::query()->create();
+    $byAlias = ProfileAssignableRecord::query()->create();
+    $otherType = ChildProfileAssignableRecord::query()->create();
+    AssignmentFacade::for($otherType)->queue();
 
+    AssignmentFacade::for($byClass)->queue();
     expect(AssignmentFacade::flushQueue(ProfileAssignableRecord::class))->toBe(1);
+
+    AssignmentFacade::for($byAlias)->queue();
+    expect(AssignmentFacade::flushQueue('profile-record'))->toBe(1)
+        ->and($byClass->assignment())->not->toBeNull()
+        ->and($byAlias->assignment())->not->toBeNull()
+        ->and($otherType->queuedAssignment())->not->toBeNull();
 });

@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
+use InvalidArgumentException;
 
 /** @internal */
 final class AssignmentWriter
@@ -64,6 +65,8 @@ final class AssignmentWriter
         ?string $scope = null,
         ?string $cascadeId = null,
     ): Assignment {
+        self::ensureValidTtl($ttlSeconds);
+
         return $this->createAssignment(new AssignmentData(
             assignable: $assignable,
             assignee: $assignee,
@@ -95,7 +98,6 @@ final class AssignmentWriter
 
             return $assignment;
         });
-
     }
 
     public function decline(Model $assignee, Assignment $assignment): Assignment
@@ -118,6 +120,13 @@ final class AssignmentWriter
         }
 
         return $declined;
+    }
+
+    public static function ensureValidTtl(?int $ttlSeconds): void
+    {
+        if ($ttlSeconds !== null && $ttlSeconds < 1) {
+            throw new InvalidArgumentException('An offer TTL must be at least one second.');
+        }
     }
 
     public function reassign(
@@ -218,16 +227,11 @@ final class AssignmentWriter
                 ->lockForUpdate()
                 ->first();
 
-            if ($current === null) {
-                throw new InvalidTransition;
-            }
-
-            if (! $current->isActive()) {
+            if ($current === null || ! $current->isActive()) {
                 throw new InvalidTransition;
             }
 
             $this->end($current, EndReason::Completed);
-
             $this->syncInstance($assignment, $current);
 
             return $assignment;
@@ -248,8 +252,7 @@ final class AssignmentWriter
                 return null;
             }
 
-            $this->end($assignment, EndReason::Expired);
-            Event::dispatch(new OfferExpired($assignment));
+            $this->expireOffer($assignment);
 
             return $assignment;
         });
@@ -278,11 +281,7 @@ final class AssignmentWriter
 
     private function ensureOpenOffer(Assignment $assignment): void
     {
-        if (! $assignment->isOffered()) {
-            throw new OfferNotOpen;
-        }
-
-        if ($assignment->isExpired()) {
+        if (! $assignment->isOffered() || $assignment->isExpired()) {
             throw new OfferNotOpen;
         }
     }
@@ -377,7 +376,13 @@ final class AssignmentWriter
             throw new SlotOccupied;
         }
 
+        $this->expireOffer($assignment);
+    }
+
+    private function expireOffer(Assignment $assignment): void
+    {
         $this->end($assignment, EndReason::Expired);
+        Event::dispatch(new OfferExpired($assignment));
     }
 
     private function end(Assignment $assignment, EndReason $reason): Assignment

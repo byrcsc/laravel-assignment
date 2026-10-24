@@ -24,10 +24,8 @@ final class ModelIdentity
     {
         $key = $model->getKey();
 
-        if (! is_int($key)) {
-            if (! is_string($key)) {
-                throw new UnexpectedValueException('Assignment candidates must have integer or string keys.');
-            }
+        if (! is_int($key) && ! is_string($key)) {
+            throw new UnexpectedValueException('Assignment candidates must have integer or string keys.');
         }
 
         return $key;

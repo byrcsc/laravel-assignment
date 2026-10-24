@@ -11,8 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
- * Adds assignment history and workload readers to an assignee model.
- * Laravel morph maps are honored when assignment type columns are written.
+ * Lets a model accept and decline offers, and reads its assignment history
+ * and workload. Laravel morph maps are honored when assignment type columns
+ * are written.
  */
 trait Assignee
 {

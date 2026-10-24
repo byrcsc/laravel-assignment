@@ -8,8 +8,8 @@ use ByRcsc\LaravelAssignment\ScopeState;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Bookkeeping for stateful policies. Applications reach the state through
- * {@see ScopeState}, never through this row.
+ * Stores the state of stateful policies, one row per scope. Applications
+ * read and write that state through {@see ScopeState}.
  *
  * @property array<string, mixed> $state
  *

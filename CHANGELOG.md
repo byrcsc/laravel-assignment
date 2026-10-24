@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Assigning or offering over an expired offer now dispatches `OfferExpired`
+  for that offer, so its assignee gets the `offer_expired` notification.
+- `flushQueue()` and `assignment:tick` delete queue entries whose assignable
+  model no longer exists. Before, those entries stayed in the queue forever.
+- `offer()` and `expiresIn()` throw `InvalidArgumentException` for a TTL
+  below one second. Before, a TTL of zero or less created an offer that had
+  already expired. A profile whose `offerTtl()` returns zero or less now
+  makes `autoAssign()`, `flushQueue()`, and `assignment:tick` throw.
+- An empty-string role throws `InvalidArgumentException` on every write and
+  read. Before, `''` shared the default slot with `null`, but reads filtered
+  on `role = ''`, so `assignee('')` and `assignee()` disagreed about the same
+  slot.
+
 ## [1.0.0] - 2026-08-11
 
 ### Added

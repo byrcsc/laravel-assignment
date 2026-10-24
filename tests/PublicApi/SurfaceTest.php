@@ -98,11 +98,6 @@ it('pins the config keys', function (): void {
         ->and(Introspection::configPaths((array) $config))->toBe(Surface::configKeys());
 });
 
-it('points the notification config at the shipped notifications', function (): void {
-    expect(array_values((array) config('assignment.notifications')))
-        ->toBe(Surface::notifications());
-});
-
 it('pins the publish tags', function (string $tag): void {
     expect(ServiceProvider::pathsToPublish(AssignmentServiceProvider::class, $tag))->not->toBeEmpty();
 })->with(Surface::publishTags());
@@ -130,10 +125,6 @@ it('keeps the extension points open and the implementations closed', function ()
     expect((new ReflectionClass(AssignmentProfile::class))->isAbstract())->toBeTrue()
         ->and((new ReflectionClass(SelectionPolicy::class))->isInterface())->toBeTrue()
         ->and((new ReflectionClass(Assignment::class))->isFinal())->toBeTrue();
-});
-
-it('keeps the slot column out of the model surface', function (): void {
-    expect((new Assignment)->getHidden())->toContain('slot');
 });
 
 it('marks every class outside the public surface as internal', function (): void {

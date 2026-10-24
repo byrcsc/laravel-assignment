@@ -81,6 +81,7 @@ final class PendingAssignment
 
     public function expiresIn(?int $seconds): self
     {
+        AssignmentWriter::ensureValidTtl($seconds);
         $this->ttlSeconds = $seconds;
 
         return $this;
@@ -106,8 +107,7 @@ final class PendingAssignment
         $connection = (new AssignmentScope)->getConnection();
         $scope = $this->resolvedScope();
 
-        // Seeded before the transaction opens, so the lock below takes a row
-        // lock on a committed row rather than a gap lock on a missing one.
+        // Must run outside the transaction. See ScopeStateRepository::ensure().
         $this->states->ensure($scope);
 
         return $connection->transaction(function () use ($offer, $scope): ?Assignment {

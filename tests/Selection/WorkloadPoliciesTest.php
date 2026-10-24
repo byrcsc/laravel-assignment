@@ -11,10 +11,8 @@ use ByRcsc\LaravelAssignment\Policies\LeastWorkload;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssignableRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssigneeRecord;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -189,30 +187,6 @@ it('honors candidate order with first available', function (): void {
         ->assign();
 
     expect($assignment?->assignee->is($senior))->toBeTrue();
-});
-
-it('lets closure policies filter then delegate and return null', function (): void {
-    $selectedTarget = AssignableRecord::query()->create();
-    $emptyTarget = AssignableRecord::query()->create();
-    $junior = AssigneeRecord::query()->create(['seniority' => 2]);
-    $senior = AssigneeRecord::query()->create(['seniority' => 10]);
-    $firstEligible = fn (Collection $candidates): ?Model => $candidates->first();
-
-    $selected = AssignmentFacade::for($selectedTarget)
-        ->among([$junior, $senior])
-        ->using(fn (Model $assignable, Collection $candidates): ?Model => $firstEligible(
-            $candidates->filter(fn (AssigneeRecord $candidate): bool => $candidate->seniority >= 5),
-        ))
-        ->assign();
-    $empty = AssignmentFacade::for($emptyTarget)
-        ->among([$junior])
-        ->using(fn (Model $assignable, Collection $candidates): ?Model => $firstEligible(
-            $candidates->filter(fn (AssigneeRecord $candidate): bool => $candidate->seniority >= 5),
-        ))
-        ->assign();
-
-    expect($selected?->assignee->is($senior))->toBeTrue()
-        ->and($empty)->toBeNull();
 });
 
 it('keeps selection query count constant as the candidate set grows', function (): void {

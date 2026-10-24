@@ -51,10 +51,6 @@ final class AssignmentNotificationListener
     {
         $class = config("assignment.notifications.{$moment}");
 
-        if ($class === null) {
-            return;
-        }
-
         if (! is_string($class)) {
             return;
         }
