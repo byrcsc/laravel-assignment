@@ -11,16 +11,15 @@ use ByRcsc\LaravelAssignment\ScopeState;
 final class ScopeStateRepository
 {
     /**
-     * Create the scope row if it is missing, outside any transaction the
-     * caller is about to open.
+     * Creates the scope row if it is missing. Call this before opening the
+     * transaction that calls lock().
      *
-     * InnoDB gives `insert ... ignore` a shared lock on the row it collides
-     * with, so seeding inside the locking transaction makes every caller
-     * upgrade that shared lock to exclusive, and two of them deadlock. Seeding
-     * here commits immediately and releases the lock, which also keeps the
-     * later `for update` on an existing row rather than on a gap: without a
-     * row to point at, InnoDB locks the gap where it would go, and two
-     * unrelated scopes that fall in the same gap block each other.
+     * InnoDB takes a shared lock on the row that `insert ... ignore` collides
+     * with. Inside the locking transaction, every caller then upgrades that
+     * lock to exclusive, and two callers deadlock. A committed row also keeps
+     * the later `for update` on that row. Without the row, InnoDB locks the
+     * gap where the row would go, and unrelated scopes in the same gap block
+     * each other.
      */
     public function ensure(string $scope): void
     {
