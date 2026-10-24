@@ -5,6 +5,7 @@ declare(strict_types=1);
 use ByRcsc\LaravelAssignment\Enums\AssignmentStatus;
 use ByRcsc\LaravelAssignment\Enums\EndReason;
 use ByRcsc\LaravelAssignment\Events\Assigned;
+use ByRcsc\LaravelAssignment\Events\OfferExpired;
 use ByRcsc\LaravelAssignment\Events\Unassigned;
 use ByRcsc\LaravelAssignment\Exceptions\InvalidTransition;
 use ByRcsc\LaravelAssignment\Exceptions\NotAssigned;
@@ -77,6 +78,7 @@ it('does not report unrelated integrity failures as occupied slots', function ()
 });
 
 it('ends an expired offer before claiming its slot', function (): void {
+    Event::fake([OfferExpired::class]);
     CarbonImmutable::setTestNow('2026-08-08 12:00:00');
 
     $assignable = AssignableRecord::query()->create();
@@ -101,6 +103,8 @@ it('ends an expired offer before claiming its slot', function (): void {
         ->and($offer->getRawOriginal('slot'))->toBeNull()
         ->and($assignment->isActive())->toBeTrue()
         ->and($assignable->assignments()->count())->toBe(2);
+
+    Event::assertDispatchedTimes(OfferExpired::class, 1);
 });
 
 it('unassigns the active row and retains history for a later claim', function (): void {

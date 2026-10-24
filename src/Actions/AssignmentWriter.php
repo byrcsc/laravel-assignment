@@ -248,8 +248,7 @@ final class AssignmentWriter
                 return null;
             }
 
-            $this->end($assignment, EndReason::Expired);
-            Event::dispatch(new OfferExpired($assignment));
+            $this->expireOffer($assignment);
 
             return $assignment;
         });
@@ -377,7 +376,13 @@ final class AssignmentWriter
             throw new SlotOccupied;
         }
 
+        $this->expireOffer($assignment);
+    }
+
+    private function expireOffer(Assignment $assignment): void
+    {
         $this->end($assignment, EndReason::Expired);
+        Event::dispatch(new OfferExpired($assignment));
     }
 
     private function end(Assignment $assignment, EndReason $reason): Assignment
