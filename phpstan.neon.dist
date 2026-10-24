@@ -19,3 +19,12 @@ parameters:
     # config/assignment.php is reported as being outside the config directory.
     configDirectories:
         - config
+
+    # AssignmentNotification::view() builds the view name at runtime, so
+    # PHPStan cannot prove that it is a view-string. The four shipped views
+    # exist, and AssignmentNotificationTest renders each one.
+    ignoreErrors:
+        -
+            identifier: argument.type
+            message: '#^Parameter \#1 \$view of method Illuminate\\Notifications\\Messages\\MailMessage\:\:markdown\(\) expects view\-string, string given\.$#'
+            path: src/Notifications/AssignmentNotification.php
