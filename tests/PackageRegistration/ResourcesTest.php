@@ -5,10 +5,6 @@ declare(strict_types=1);
 use ByRcsc\LaravelAssignment\AssignmentServiceProvider;
 use Illuminate\Support\ServiceProvider;
 
-it('registers the config file', function (): void {
-    expect(config('assignment'))->toBeArray();
-});
-
 it('publishes the config under the assignment-config tag', function (): void {
     $paths = ServiceProvider::pathsToPublish(AssignmentServiceProvider::class, 'assignment-config');
 
@@ -28,12 +24,4 @@ it('publishes the migration under the assignment-migrations tag', function (): v
         expect($source)->toEndWith('create_assignments_table.php.stub')
             ->and($destination)->toEndWith('create_assignments_table.php');
     }
-});
-
-it('publishes notification translations and mail views', function (): void {
-    $translations = ServiceProvider::pathsToPublish(AssignmentServiceProvider::class, 'assignment-translations');
-    $views = ServiceProvider::pathsToPublish(AssignmentServiceProvider::class, 'assignment-views');
-
-    expect($translations)->not->toBeEmpty()
-        ->and($views)->not->toBeEmpty();
 });

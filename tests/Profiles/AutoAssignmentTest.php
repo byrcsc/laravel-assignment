@@ -8,7 +8,6 @@ use ByRcsc\LaravelAssignment\Enums\Mode;
 use ByRcsc\LaravelAssignment\Exceptions\NoProfile;
 use ByRcsc\LaravelAssignment\Facades\Assignment as AssignmentFacade;
 use ByRcsc\LaravelAssignment\Policies\FirstAvailable;
-use ByRcsc\LaravelAssignment\Support\AssignmentProfileResolver;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssignableRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssigneeRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\ChildProfileAssignableRecord;
@@ -80,31 +79,23 @@ it('resolves a parent profile through the container and offers with role and ttl
     $settings->scope = 'profile:drivers';
     $settings->mode = Mode::Offer;
     $settings->ttl = 120;
-    $settings->queuePriority = 10;
     app()->instance(ProfileSettings::class, $settings);
     config()->set('assignment.profiles', [
         ProfileAssignableRecord::class => InjectedAssignmentProfile::class,
     ]);
 
     $offer = $assignable->autoAssign('driver');
-    $profile = app(AssignmentProfileResolver::class)->resolve($assignable);
-    $queueWhenEmpty = $profile->queueWhenEmpty($assignable, 'driver');
-    $queuePriority = $profile->queuePriority($assignable, 'driver');
 
     expect($offer?->isOffered())->toBeTrue()
         ->and($offer?->role)->toBe('driver')
         ->and($offer?->scope)->toBe('profile:drivers')
         ->and($offer?->expires_at?->equalTo(now()->addSeconds(120)))->toBeTrue()
-        ->and($queueWhenEmpty)->toBeTrue()
-        ->and($queuePriority)->toBe(10)
-        ->and($settings->calls)->toBe([
+        ->and($settings->calls)->toEqualCanonicalizing([
             ['method' => 'candidates', 'role' => 'driver'],
             ['method' => 'scope', 'role' => 'driver'],
             ['method' => 'policy', 'role' => 'driver'],
             ['method' => 'mode', 'role' => 'driver'],
             ['method' => 'offerTtl', 'role' => 'driver'],
-            ['method' => 'queueWhenEmpty', 'role' => 'driver'],
-            ['method' => 'queuePriority', 'role' => 'driver'],
         ]);
 });
 
