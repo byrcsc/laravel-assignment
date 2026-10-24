@@ -73,6 +73,8 @@ final class AssignmentQueue
                     $assignable = $entry->assignable;
 
                     if (! $assignable instanceof Model) {
+                        $entry->delete();
+
                         return false;
                     }
 

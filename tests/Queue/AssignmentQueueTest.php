@@ -159,6 +159,15 @@ it('keeps candidate-less entries without retrying them in the same flush', funct
         ->and(QueuedAssignment::query()->count())->toBe(1);
 });
 
+it('drops entries whose assignable no longer exists', function (): void {
+    $assignable = ProfileAssignableRecord::query()->create();
+    AssignmentFacade::for($assignable)->queue();
+    $assignable->delete();
+
+    expect(AssignmentFacade::flushQueue())->toBe(0)
+        ->and(QueuedAssignment::query()->count())->toBe(0);
+});
+
 it('flushes assign and offer profiles through their configured modes', function (): void {
     CarbonImmutable::setTestNow('2026-08-08 12:00:00');
 
