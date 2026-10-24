@@ -10,6 +10,7 @@ use ByRcsc\LaravelAssignment\Events\AssignmentOffered;
 use ByRcsc\LaravelAssignment\Exceptions\NotTheAssignee;
 use ByRcsc\LaravelAssignment\Exceptions\OfferNotOpen;
 use ByRcsc\LaravelAssignment\Exceptions\SlotOccupied;
+use ByRcsc\LaravelAssignment\Facades\Assignment as AssignmentFacade;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\ActorRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssignableRecord;
 use ByRcsc\LaravelAssignment\Tests\Fixtures\AssigneeRecord;
@@ -56,6 +57,15 @@ it('creates a standing offer and an expiring offer through the shared slot write
 
     Event::assertDispatchedTimes(AssignmentOffered::class, 2);
 });
+
+it('rejects an offer TTL below one second', function (int $ttl): void {
+    $assignable = AssignableRecord::query()->create();
+    $assignee = AssigneeRecord::query()->create();
+
+    expect(fn () => $assignable->offer($assignee, ttlSeconds: $ttl))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => AssignmentFacade::for($assignable)->expiresIn($ttl))->toThrow(InvalidArgumentException::class)
+        ->and($assignable->assignments()->count())->toBe(0);
+})->with([0, -30]);
 
 it('keeps an open offer exclusive and lets a later offer displace it after expiry', function (): void {
     CarbonImmutable::setTestNow('2026-08-08 12:00:00');

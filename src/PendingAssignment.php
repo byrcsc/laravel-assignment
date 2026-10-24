@@ -81,6 +81,7 @@ final class PendingAssignment
 
     public function expiresIn(?int $seconds): self
     {
+        AssignmentWriter::ensureValidTtl($seconds);
         $this->ttlSeconds = $seconds;
 
         return $this;

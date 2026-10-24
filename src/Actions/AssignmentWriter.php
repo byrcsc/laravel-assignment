@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
+use InvalidArgumentException;
 
 /** @internal */
 final class AssignmentWriter
@@ -64,6 +65,8 @@ final class AssignmentWriter
         ?string $scope = null,
         ?string $cascadeId = null,
     ): Assignment {
+        self::ensureValidTtl($ttlSeconds);
+
         return $this->createAssignment(new AssignmentData(
             assignable: $assignable,
             assignee: $assignee,
@@ -118,6 +121,13 @@ final class AssignmentWriter
         }
 
         return $declined;
+    }
+
+    public static function ensureValidTtl(?int $ttlSeconds): void
+    {
+        if ($ttlSeconds !== null && $ttlSeconds < 1) {
+            throw new InvalidArgumentException('An offer TTL must be at least one second.');
+        }
     }
 
     public function reassign(
